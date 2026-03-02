@@ -846,7 +846,7 @@ function SymptomsPage({ user, setCurrentPage }) {
 }
 
 // Insights Page
-function InsightsPage({ user,currentPage }) {
+function InsightsPage({ user, setCurrentPage}) {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -869,6 +869,12 @@ function InsightsPage({ user,currentPage }) {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
+        <button
+            onClick={() => setCurrentPage('dashboard')}
+            className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+          >
+            ← Back to Dashboard
+          </button>
         <h2 className="text-3xl font-bold text-slate-900">AI Health Insights</h2>
         <button
           onClick={fetchInsights}
