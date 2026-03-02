@@ -3,7 +3,7 @@ import { Heart, LogOut, Plus, Trash2, Eye, EyeOff, ChevronRight, AlertCircle, Ch
 
 // API Service
 //for localhost add const API_BASE_URL = 'http://localhost:8000/api';
-const API_BASE_URL = '//https://meditrack.up.railway.app/api';
+const API_BASE_URL = 'https://meditrack.up.railway.app/api';
 
 const apiCall = async (endpoint, options = {}) => {
   const token = localStorage.getItem('access_token');
