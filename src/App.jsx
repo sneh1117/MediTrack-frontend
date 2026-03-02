@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Heart, LogOut, Plus, Trash2, Eye, EyeOff, ChevronRight, AlertCircle, CheckCircle, Clock, TrendingUp, Brain, Activity, Calendar, Pill, MessageSquare, Loader } from 'lucide-react';
-
-// API Service
+import LandingPage from './LandingPage';
+// API Service for now 
 //for localhost add const API_BASE_URL = 'http://localhost:8000/api';
 const API_BASE_URL = 'https://meditrack.up.railway.app/api';
 
@@ -32,7 +32,7 @@ const apiCall = async (endpoint, options = {}) => {
 
 // Main App - FIXED
 export default function MediTrackApp() {
-  const [currentPage, setCurrentPage] = useState('login');
+  const [currentPage, setCurrentPage] = useState('landing');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -119,15 +119,16 @@ export default function MediTrackApp() {
         </nav>
       )}
 
-      {/* Page Content */}
-      <div className="max-w-7xl mx-auto">
-        {currentPage === 'login' && <LoginPage onSuccess={fetchProfile} setCurrentPage={setCurrentPage} />}
-        {currentPage === 'register' && <RegisterPage setCurrentPage={setCurrentPage} />}
-        {currentPage === 'dashboard' && user && <DashboardPage user={user} setCurrentPage={setCurrentPage} />}
-        {currentPage === 'medications' && user && <MedicationsPage user={user} />}
-        {currentPage === 'symptoms' && user && <SymptomsPage user={user} />}
-        {currentPage === 'insights' && user && <InsightsPage user={user} />}
-      </div>
+    {/* Page Content */}
+<div className="max-w-7xl mx-auto">
+  {!user && currentPage === 'landing' && <LandingPage setCurrentPage={setCurrentPage} />}
+  {currentPage === 'login' && <LoginPage onSuccess={fetchProfile} setCurrentPage={setCurrentPage} />}
+  {currentPage === 'register' && <RegisterPage setCurrentPage={setCurrentPage} />}
+  {currentPage === 'dashboard' && user && <DashboardPage user={user} setCurrentPage={setCurrentPage} />}
+  {currentPage === 'medications' && user && <MedicationsPage user={user} />}
+  {currentPage === 'symptoms' && user && <SymptomsPage user={user} />}
+  {currentPage === 'insights' && user && <InsightsPage user={user} />}
+</div>
     </div>
   );
 }
