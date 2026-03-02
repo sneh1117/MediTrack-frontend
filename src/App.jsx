@@ -1,6 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Heart, LogOut, Plus, Trash2, Eye, EyeOff, ChevronRight, AlertCircle, CheckCircle, Clock, TrendingUp, Brain, Activity, Calendar, Pill, MessageSquare, Loader } from 'lucide-react';
 import LandingPage from './LandingPage';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
 // API Service for now 
 //for localhost add const API_BASE_URL = 'http://localhost:8000/api';
 const API_BASE_URL = 'https://meditrack.up.railway.app/api';
@@ -46,10 +58,10 @@ export default function MediTrackApp() {
   const fetchProfile = async () => {
     try {
       console.log('Fetching profile...');
-      
+
       const token = localStorage.getItem('access_token');
       console.log('Token from storage:', token);
-      
+
       if (!token) {
         console.log('No token found');
         return;
@@ -93,15 +105,18 @@ export default function MediTrackApp() {
       {user && (
         <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
           <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-            <div className="flex items-center gap-3">
+            <button
+              onClick={() => setCurrentPage('dashboard')}
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            >
               <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center">
                 <Heart className="w-6 h-6 text-white" />
               </div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                 MediTrack
               </h1>
-            </div>
-            
+            </button>
+
             <div className="flex items-center gap-6">
               <div className="text-right">
                 <p className="text-sm font-semibold text-slate-900">{user?.username}</p>
@@ -119,16 +134,23 @@ export default function MediTrackApp() {
         </nav>
       )}
 
-    {/* Page Content */}
-<div className="max-w-7xl mx-auto">
-  {!user && currentPage === 'landing' && <LandingPage setCurrentPage={setCurrentPage} />}
-  {currentPage === 'login' && <LoginPage onSuccess={fetchProfile} setCurrentPage={setCurrentPage} />}
-  {currentPage === 'register' && <RegisterPage setCurrentPage={setCurrentPage} />}
-  {currentPage === 'dashboard' && user && <DashboardPage user={user} setCurrentPage={setCurrentPage} />}
-  {currentPage === 'medications' && user && <MedicationsPage user={user} />}
-  {currentPage === 'symptoms' && user && <SymptomsPage user={user} />}
-  {currentPage === 'insights' && user && <InsightsPage user={user} />}
-</div>
+      {/* Page Content */}
+      <div className="max-w-7xl mx-auto">
+        {!user && currentPage === 'landing' && <LandingPage setCurrentPage={setCurrentPage} />}
+        {currentPage === 'login' && <LoginPage onSuccess={fetchProfile} setCurrentPage={setCurrentPage} />}
+        {currentPage === 'register' && <RegisterPage setCurrentPage={setCurrentPage} />}
+        {currentPage === 'dashboard' && user && <DashboardPage user={user} setCurrentPage={setCurrentPage} />}
+        {currentPage === 'medications' && user && (
+          <MedicationsPage user={user} setCurrentPage={setCurrentPage} />
+        )}
+        {currentPage === 'symptoms' && user && (
+          <SymptomsPage user={user} setCurrentPage={setCurrentPage} />
+        )}
+        {currentPage === 'insights' && user && (
+          <InsightsPage user={user} setCurrentPage={setCurrentPage} />
+        )}
+
+      </div>
     </div>
   );
 }
@@ -148,16 +170,16 @@ function LoginPage({ onSuccess, setCurrentPage }) {
 
     try {
       console.log('Attempting login with:', { username: email, password });
-      
+
       // ⭐ Use API_BASE_URL instead of hardcoded URL
       const response = await fetch(`${API_BASE_URL}/auth/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           username: email,
-          password: password 
+          password: password
         }),
       });
 
@@ -173,14 +195,14 @@ function LoginPage({ onSuccess, setCurrentPage }) {
 
       // Handle both response formats
       const tokens = data.data || data;
-      
+
       if (!tokens.access) {
         throw new Error('No access token received');
       }
 
       localStorage.setItem('access_token', tokens.access);
       localStorage.setItem('refresh_token', tokens.refresh);
-      
+
       console.log('Login successful, fetching profile...');
       onSuccess();
     } catch (err) {
@@ -277,43 +299,43 @@ function RegisterPage({ setCurrentPage }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-const handleRegister = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setError('');
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-  // Password confirmation check
-  if (formData.password !== formData.password_confirm) {
-    setError('Passwords do not match');
-    setLoading(false);
-    return;
-  }
+    // Password confirmation check
+    if (formData.password !== formData.password_confirm) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
 
-  if (formData.password.length < 8) {
-    setError('Password must be at least 8 characters');
-    setLoading(false);
-    return;
-  }
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters');
+      setLoading(false);
+      return;
+    }
 
-  try {
-    const data = await apiCall('/auth/register/', {
-      method: 'POST',
-      body: JSON.stringify({
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-      }),
-    });
+    try {
+      const data = await apiCall('/auth/register/', {
+        method: 'POST',
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+        }),
+      });
 
-    alert('Account created! Please login.');
-    setCurrentPage('login');
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+      alert('Account created! Please login.');
+      setCurrentPage('login');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8">
@@ -423,16 +445,21 @@ function DashboardPage({ user, setCurrentPage }) {
   }, []);
 
   const fetchDashboard = async () => {
-    try {
-      setLoading(true);
-      const data = await apiCall('/dashboard/');
-      setDashboardData(data);
-    } catch (err) {
-      console.error('Error fetching dashboard:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    setLoading(true);
+    const data = await apiCall('/dashboard/');
+    
+    console.log("FULL DASHBOARD DATA:", data);
+    console.log("Symptom Trends:", data.symptom_trends);
+    console.log("Common Symptoms:", data.common_symptoms);
+
+    setDashboardData(data);
+  } catch (err) {
+    console.error('Error fetching dashboard:', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (loading) {
     return (
@@ -449,7 +476,7 @@ function DashboardPage({ user, setCurrentPage }) {
         <NavCard icon={<Pill className="w-6 h-6" />} label="Medications" onClick={() => setCurrentPage('medications')} />
         <NavCard icon={<Activity className="w-6 h-6" />} label="Symptoms" onClick={() => setCurrentPage('symptoms')} />
         <NavCard icon={<Brain className="w-6 h-6" />} label="AI Insights" onClick={() => setCurrentPage('insights')} />
-        <NavCard icon={<Calendar className="w-6 h-6" />} label="History" />
+       <NavCard icon={<Calendar className="w-6 h-6" />} label="History" />
       </div>
 
       {/* Stats Cards */}
@@ -493,7 +520,7 @@ function DashboardPage({ user, setCurrentPage }) {
 }
 
 // Medications Page
-function MedicationsPage({ user }) {
+function MedicationsPage({ user, setCurrentPage }) {
   const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -566,7 +593,15 @@ function MedicationsPage({ user }) {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold text-slate-900">My Medications</h2>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setCurrentPage('dashboard')}
+            className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+          >
+            ← Back to Dashboard
+          </button>
+          <h2 className="text-3xl font-bold text-slate-900">My Medications</h2>
+        </div>
         <button
           onClick={() => {
             setShowForm(!showForm);
@@ -637,7 +672,7 @@ function MedicationsPage({ user }) {
 }
 
 // Symptoms Page
-function SymptomsPage({ user }) {
+function SymptomsPage({ user, setCurrentPage }) {
   const [symptoms, setSymptoms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -693,7 +728,15 @@ function SymptomsPage({ user }) {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold text-slate-900">Symptom Log</h2>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setCurrentPage('dashboard')}
+            className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+          >
+            ← Back to Dashboard
+          </button>
+          <h2 className="text-3xl font-bold text-slate-900">Symptom Log</h2>
+        </div>
         <button
           onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:shadow-lg transition-all"
@@ -803,7 +846,7 @@ function SymptomsPage({ user }) {
 }
 
 // Insights Page
-function InsightsPage({ user }) {
+function InsightsPage({ user,currentPage }) {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -1001,20 +1044,61 @@ function StatCard({ title, value, icon, color }) {
 }
 
 // Component: Chart Card
+
+// Register once
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
 function ChartCard({ title, data, type = 'line' }) {
+  // Debug (you can remove later)
+  console.log(`Chart Data for ${title}:`, data);
+
+  if (!data || !data.labels || !data.datasets) {
+    return (
+      <div className="bg-white rounded-lg border border-slate-200 p-6">
+        <h3 className="font-semibold text-slate-900 mb-4">{title}</h3>
+        <div className="bg-slate-50 rounded-lg p-4 h-64 flex items-center justify-center text-slate-400">
+          No data available
+        </div>
+      </div>
+    );
+  }
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+      },
+    },
+  };
+
   return (
     <div className="bg-white rounded-lg border border-slate-200 p-6">
       <h3 className="font-semibold text-slate-900 mb-4">{title}</h3>
-      {data ? (
-        <div className="bg-slate-50 rounded-lg p-4 h-48 flex items-center justify-center text-slate-500 text-sm">
-          <p>Chart visualization would render here using Chart.js</p>
-          <p className="text-xs mt-2">({data.labels?.length || 0} data points)</p>
-        </div>
-      ) : (
-        <div className="bg-slate-50 rounded-lg p-4 h-48 flex items-center justify-center text-slate-400">
-          No data available
-        </div>
-      )}
+
+      <div className="h-64">
+        {type === 'bar' ? (
+          <Bar data={data} options={options} />
+        ) : (
+          <Line data={data} options={options} />
+        )}
+      </div>
     </div>
   );
 }
