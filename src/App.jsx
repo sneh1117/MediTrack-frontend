@@ -30,7 +30,7 @@ const apiCall = async (endpoint, options = {}) => {
   return response.json();
 };
 
-// Main App
+// Main App - FIXED
 export default function MediTrackApp() {
   const [currentPage, setCurrentPage] = useState('login');
   const [user, setUser] = useState(null);
@@ -44,41 +44,42 @@ export default function MediTrackApp() {
   }, []);
 
   const fetchProfile = async () => {
-  try {
-    console.log('Fetching profile...');
-    
-    const token = localStorage.getItem('access_token');
-    console.log('Token from storage:', token);
-    
-    if (!token) {
-      console.log('No token found');
-      return;
-    }
+    try {
+      console.log('Fetching profile...');
+      
+      const token = localStorage.getItem('access_token');
+      console.log('Token from storage:', token);
+      
+      if (!token) {
+        console.log('No token found');
+        return;
+      }
 
-    const response = await fetch('http://127.0.0.1:8000/api/auth/profile/', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+      // ⭐ Use API_BASE_URL instead of hardcoded URL
+      const response = await fetch(`${API_BASE_URL}/auth/profile/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
-    console.log('Profile response status:', response.status);
+      console.log('Profile response status:', response.status);
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Profile data:', data);
-      setUser(data);
-      setCurrentPage('dashboard');
-    } else {
-      console.log('Profile fetch failed');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Profile data:', data);
+        setUser(data);
+        setCurrentPage('dashboard');
+      } else {
+        console.log('Profile fetch failed');
+        localStorage.clear();
+      }
+    } catch (err) {
+      console.error('Profile fetch error:', err);
       localStorage.clear();
     }
-  } catch (err) {
-    console.error('Profile fetch error:', err);
-    localStorage.clear();
-  }
-};
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -131,7 +132,7 @@ export default function MediTrackApp() {
   );
 }
 
-// Login Page
+// Login Page - FIXED
 function LoginPage({ onSuccess, setCurrentPage }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -139,101 +140,56 @@ function LoginPage({ onSuccess, setCurrentPage }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-const handleLogin = async (e) => {
- const handleLogin = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setError('');
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-  try {
-    console.log('Attempting login with username:', email);
-    
-    // Use the apiCall function instead of direct fetch
-    const data = await apiCall('/auth/login/', {
-      method: 'POST',
-      body: JSON.stringify({
-        username: email,
-        password: password,
-      }),
-    });
-
-    console.log('Login response:', data);
-
-    // Handle both response formats (with or without .data wrapper)
-    const tokens = data.data || data;
-    
-    console.log('Token data:', tokens);
-    
-    if (!tokens.access || !tokens.refresh) {
-      throw new Error('No access token received from server');
-    }
-
-    // Save tokens to localStorage
-    localStorage.setItem('access_token', tokens.access);
-    localStorage.setItem('refresh_token', tokens.refresh);
-    
-    console.log('Tokens saved successfully');
-    
-    // Call onSuccess to fetch profile and redirect to dashboard
-    onSuccess();
-  } catch (err) {
-    console.error('Login error:', err);
-    setError(err.message || 'Invalid username or password');
-  } finally {
-    setLoading(false);
-  }
-}; e.preventDefault();
-  setLoading(true);
-  setError('');
-
-  try {
-    console.log('Attempting login with:', { username: email, password: password });
-    
-    const response = await fetch('http://127.0.0.1:8000/api/auth/login/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        username: email,
-        password: password,
-      }),
-    });
-
-    console.log('Login response status:', response.status);
-    
-    const data = await response.json();
-    console.log('Login response data:', data);
-
-    if (response.ok) {
-      // Handle both response formats
-      const tokenData = data.data || data;
+    try {
+      console.log('Attempting login with:', { username: email, password });
       
-      console.log('Token data:', tokenData);
-      
-      if (!tokenData.access) {
-        throw new Error('No access token in response');
+      // ⭐ Use API_BASE_URL instead of hardcoded URL
+      const response = await fetch(`${API_BASE_URL}/auth/login/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          username: email,
+          password: password 
+        }),
+      });
+
+      console.log('Response status:', response.status);
+
+      const data = await response.json();
+      console.log('Login response:', data);
+
+      if (!response.ok) {
+        setError('Invalid username or password');
+        return;
       }
 
-      // Save tokens to localStorage
-      localStorage.setItem('access_token', tokenData.access);
-      localStorage.setItem('refresh_token', tokenData.refresh);
+      // Handle both response formats
+      const tokens = data.data || data;
       
-      console.log('Tokens saved successfully');
-      console.log('Stored access_token:', localStorage.getItem('access_token'));
+      if (!tokens.access) {
+        throw new Error('No access token received');
+      }
+
+      localStorage.setItem('access_token', tokens.access);
+      localStorage.setItem('refresh_token', tokens.refresh);
       
-      // Call onSuccess to fetch profile and redirect
+      console.log('Login successful, fetching profile...');
       onSuccess();
-    } else {
-      setError('Invalid username or password');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.message || 'Login failed. Is the server running?');
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error('Login error:', err);
-    setError(err.message || 'Failed to login');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
@@ -308,7 +264,6 @@ const handleLogin = async (e) => {
     </div>
   );
 }
-
 // Register Page
 function RegisterPage({ setCurrentPage }) {
   const [formData, setFormData] = useState({
