@@ -19,7 +19,7 @@ import {
 import { Line, Bar } from 'react-chartjs-2';
 // API Service for now 
 //for localhost add const API_BASE_URL = 'http://localhost:8000/api';
-const API_BASE_URL ='https://meditrack.up.railway.app/api';
+const API_BASE_URL = 'https://meditrack.up.railway.app/api';
 
 const apiCall = async (endpoint, options = {}) => {
   const token = localStorage.getItem('access_token');
@@ -192,10 +192,21 @@ export default function MediTrackApp() {
             </button>
 
             <div className="flex items-center gap-6">
+
               <div className="text-right">
                 <p className="text-sm font-semibold text-slate-900">{user?.username}</p>
                 <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
               </div>
+
+              {/* Settings link */}
+              <button
+                onClick={() => setCurrentPage('profile')}
+                className="flex items-center gap-2 text-slate-600 hover:text-blue-600 transition-colors"
+              >
+                <Settings className="w-5 h-5" />
+                <span className="text-sm font-medium">Settings</span>
+              </button>
+
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
@@ -1173,7 +1184,7 @@ function ProfilePage({ user, setCurrentPage, showToast }) {
       await apiCall('/auth/profile/', {
         method: 'PATCH',
         body: JSON.stringify({ email_digest_enabled: digestEnabled }),
-        
+
       });
       showToast('Preferences saved!', 'success');
     } catch (err) {
