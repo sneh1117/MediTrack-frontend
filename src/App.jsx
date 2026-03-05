@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Heart, LogOut, Plus, Trash2, Eye, EyeOff, ChevronRight, AlertCircle, CheckCircle, Clock, TrendingUp, Brain, Activity, Calendar, Pill, MessageSquare, Loader } from 'lucide-react';
+import {
+  Heart, LogOut, Plus, Trash2, Eye, EyeOff, ChevronRight,
+  AlertCircle, CheckCircle, Clock, TrendingUp, Brain, Activity,
+  Calendar, Pill, MessageSquare, Loader, Download, Settings, Bell
+} from 'lucide-react';
 import LandingPage from './LandingPage';
 import {
   Chart as ChartJS,
@@ -15,7 +19,7 @@ import {
 import { Line, Bar } from 'react-chartjs-2';
 // API Service for now 
 //for localhost add const API_BASE_URL = 'http://localhost:8000/api';
-const API_BASE_URL = 'https://meditrack.up.railway.app/api';
+const API_BASE_URL ='https://meditrack.up.railway.app/api';
 
 const apiCall = async (endpoint, options = {}) => {
   const token = localStorage.getItem('access_token');
@@ -36,14 +40,42 @@ const apiCall = async (endpoint, options = {}) => {
       window.location.href = '/login';
     }
     const error = await response.json();
-    throw new Error(error.detail || 'API Error');
+    throw new Error(JSON.stringify(error));
   }
 
   return response.json();
 };
 
+function Toast({ message, type = 'success', onClose }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3500);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const styles = {
+    success: 'bg-green-50 border-green-200 text-green-800',
+    error: 'bg-red-50 border-red-200 text-red-800',
+    loading: 'bg-blue-50 border-blue-200 text-blue-800',
+  };
+
+  return (
+    <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-4 
+      rounded-xl border shadow-lg text-sm font-medium transition-all ${styles[type]}`}>
+      {type === 'loading' && <Loader className="w-4 h-4 animate-spin flex-shrink-0" />}
+      {type === 'success' && <CheckCircle className="w-4 h-4 flex-shrink-0" />}
+      {type === 'error' && <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+      {message}
+    </div>
+  );
+}
+
+
+
+
+
 // Main App - FIXED
 export default function MediTrackApp() {
+
   const [currentPage, setCurrentPage] = useState('landing');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -99,8 +131,50 @@ export default function MediTrackApp() {
     setCurrentPage('login');
   };
 
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
+  const downloadPDF = async (days = 30) => {
+    showToast('Generating your health report...', 'loading');
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(
+        `${API_BASE_URL}/reports/export/?days=${days}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!response.ok) throw new Error('Failed to generate report');
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `meditrack_report_${days}days.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Report downloaded successfully!', 'success');
+    } catch (err) {
+      showToast('Failed to download report. Try again.', 'error');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
+      {/* Toast */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+
+
+
+
       {/* Navigation Bar */}
       {user && (
         <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
@@ -139,7 +213,12 @@ export default function MediTrackApp() {
         {!user && currentPage === 'landing' && <LandingPage setCurrentPage={setCurrentPage} />}
         {currentPage === 'login' && <LoginPage onSuccess={fetchProfile} setCurrentPage={setCurrentPage} />}
         {currentPage === 'register' && <RegisterPage setCurrentPage={setCurrentPage} />}
-        {currentPage === 'dashboard' && user && <DashboardPage user={user} setCurrentPage={setCurrentPage} />}
+        {currentPage === 'dashboard' && user && (
+          <DashboardPage user={user} setCurrentPage={setCurrentPage} downloadPDF={downloadPDF} />  // ← downloadPDF here
+        )}
+        {currentPage === 'profile' && user && (
+          <ProfilePage user={user} setCurrentPage={setCurrentPage} showToast={showToast} />  // ← this line exists
+        )}
         {currentPage === 'medications' && user && (
           <MedicationsPage user={user} setCurrentPage={setCurrentPage} />
         )}
@@ -435,31 +514,25 @@ function RegisterPage({ setCurrentPage }) {
     </div>
   );
 }
-// Dashboard Page
-function DashboardPage({ user, setCurrentPage }) {
+function DashboardPage({ user, setCurrentPage, downloadPDF }) {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedDays, setSelectedDays] = useState(30);
 
-  useEffect(() => {
-    fetchDashboard();
-  }, []);
+  useEffect(() => { fetchDashboard(); }, []);
 
   const fetchDashboard = async () => {
-  try {
-    setLoading(true);
-    const data = await apiCall('/dashboard/');
-    
-    console.log("FULL DASHBOARD DATA:", data);
-    console.log("Symptom Trends:", data.symptom_trends);
-    console.log("Common Symptoms:", data.common_symptoms);
-
-    setDashboardData(data);
-  } catch (err) {
-    console.error('Error fetching dashboard:', err);
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setLoading(true);
+      const data = await apiCall('/dashboard/');
+      console.log("FULL DASHBOARD DATA:", data);
+      setDashboardData(data);
+    } catch (err) {
+      console.error('Error fetching dashboard:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -471,49 +544,69 @@ function DashboardPage({ user, setCurrentPage }) {
 
   return (
     <div className="p-6 space-y-6">
+
+      {/* Export Health Report Bar */}
+      {user.role === 'patient' && (
+        <div className="bg-white rounded-xl border border-slate-200 px-6 py-4
+          flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+              <Download className="w-4 h-4 text-blue-600" />
+              Export Health Report
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Download a PDF summary of your medications, symptoms, mood and AI insights
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex rounded-lg border border-slate-200 overflow-hidden text-sm">
+              {[7, 30, 90].map(d => (
+                <button
+                  key={d}
+                  onClick={() => setSelectedDays(d)}
+                  className={`px-3 py-1.5 font-medium transition-colors ${selectedDays === d
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                >
+                  {d}d
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => downloadPDF(selectedDays)}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r
+                from-blue-600 to-cyan-600 text-white text-sm font-semibold
+                rounded-lg hover:shadow-lg transition-all"
+            >
+              <Download className="w-4 h-4" />
+              Download PDF
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Quick Navigation */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <NavCard icon={<Pill className="w-6 h-6" />} label="Medications" onClick={() => setCurrentPage('medications')} />
         <NavCard icon={<Activity className="w-6 h-6" />} label="Symptoms" onClick={() => setCurrentPage('symptoms')} />
         <NavCard icon={<Brain className="w-6 h-6" />} label="AI Insights" onClick={() => setCurrentPage('insights')} />
-       <NavCard icon={<Calendar className="w-6 h-6" />} label="History" />
+        <NavCard icon={<Settings className="w-6 h-6" />} label="Settings" onClick={() => setCurrentPage('profile')} />
       </div>
 
       {/* Stats Cards */}
       {dashboardData?.stats && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard
-            title="Active Medications"
-            value={dashboardData.stats.active_medications}
-            icon={<Pill className="w-5 h-5" />}
-            color="blue"
-          />
-          <StatCard
-            title="Total Symptoms Logged"
-            value={dashboardData.stats.total_symptoms_logged}
-            icon={<Activity className="w-5 h-5" />}
-            color="cyan"
-          />
-          <StatCard
-            title="Last 7 Days"
-            value={dashboardData.stats.symptoms_last_7_days}
-            icon={<TrendingUp className="w-5 h-5" />}
-            color="purple"
-          />
+          <StatCard title="Active Medications" value={dashboardData.stats.active_medications} icon={<Pill className="w-5 h-5" />} color="blue" />
+          <StatCard title="Total Symptoms Logged" value={dashboardData.stats.total_symptoms_logged} icon={<Activity className="w-5 h-5" />} color="cyan" />
+          <StatCard title="Last 7 Days" value={dashboardData.stats.symptoms_last_7_days} icon={<TrendingUp className="w-5 h-5" />} color="purple" />
         </div>
       )}
 
-      {/* Chart Sections */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard
-          title="Symptom Severity Trends"
-          data={dashboardData?.symptom_trends}
-        />
-        <ChartCard
-          title="Most Common Symptoms"
-          data={dashboardData?.common_symptoms}
-          type="bar"
-        />
+        <ChartCard title="Symptom Severity Trends" data={dashboardData?.symptom_trends} />
+        <ChartCard title="Most Common Symptoms" data={dashboardData?.common_symptoms} type="bar" />
       </div>
     </div>
   );
@@ -552,16 +645,23 @@ function MedicationsPage({ user, setCurrentPage }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const payload = {
+      ...formData,
+      end_date: formData.end_date === '' ? null : formData.end_date,
+      notes: formData.notes === '' ? '' : formData.notes,
+    };
+
     try {
       if (editingId) {
         await apiCall(`/medications/${editingId}/`, {
           method: 'PUT',
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         });
       } else {
         await apiCall('/medications/', {
           method: 'POST',
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         });
       }
       fetchMedications();
@@ -576,10 +676,10 @@ function MedicationsPage({ user, setCurrentPage }) {
         notes: '',
       });
     } catch (err) {
-      console.error('Error saving medication:', err);
+      console.error('Error saving medication:', err.message);
+      alert(`Error: ${err.message}`);
     }
   };
-
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this medication?')) return;
     try {
@@ -846,7 +946,7 @@ function SymptomsPage({ user, setCurrentPage }) {
 }
 
 // Insights Page
-function InsightsPage({ user, setCurrentPage}) {
+function InsightsPage({ user, setCurrentPage }) {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -870,11 +970,11 @@ function InsightsPage({ user, setCurrentPage}) {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <button
-            onClick={() => setCurrentPage('dashboard')}
-            className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
-          >
-            ← Back to Dashboard
-          </button>
+          onClick={() => setCurrentPage('dashboard')}
+          className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+        >
+          ← Back to Dashboard
+        </button>
         <h2 className="text-3xl font-bold text-slate-900">AI Health Insights</h2>
         <button
           onClick={fetchInsights}
@@ -1062,6 +1162,110 @@ ChartJS.register(
   Tooltip,
   Legend
 );
+
+function ProfilePage({ user, setCurrentPage, showToast }) {
+  const [digestEnabled, setDigestEnabled] = useState(user.email_digest_enabled ?? true);
+  const [saving, setSaving] = useState(false);
+
+  const savePreferences = async () => {
+    setSaving(true);
+    try {
+      await apiCall('/auth/profile/', {
+        method: 'PATCH',
+        body: JSON.stringify({ email_digest_enabled: digestEnabled }),
+        
+      });
+      showToast('Preferences saved!', 'success');
+    } catch (err) {
+      showToast(`Failed: ${err.message}`, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Calculate next Sunday
+  const nextSunday = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + ((7 - d.getDay()) % 7 || 7));
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  };
+
+  return (
+    <div className="p-6 space-y-6 max-w-2xl mx-auto">
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => setCurrentPage('dashboard')}
+          className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+        >
+          ← Back to Dashboard
+        </button>
+        <h2 className="text-3xl font-bold text-slate-900">Settings</h2>
+      </div>
+
+      {/* Profile Info */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+        <h3 className="font-semibold text-slate-900 text-lg">Profile</h3>
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            { label: 'Username', value: user.username },
+            { label: 'Email', value: user.email || '—' },
+            { label: 'Role', value: user.role },
+            { label: 'Phone', value: user.phone || '—' },
+          ].map(({ label, value }) => (
+            <div key={label} className="bg-slate-50 rounded-lg p-3">
+              <p className="text-xs text-slate-500 mb-1">{label}</p>
+              <p className="font-medium text-slate-900 capitalize">{value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Email Preferences — patients only */}
+      {user.role === 'patient' && (
+        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
+          <h3 className="font-semibold text-slate-900 text-lg flex items-center gap-2">
+            <Bell className="w-5 h-5 text-blue-600" />
+            Email Preferences
+          </h3>
+
+          <div className="flex items-start justify-between gap-6 p-4 
+            bg-slate-50 rounded-lg border border-slate-200">
+            <div>
+              <p className="font-medium text-slate-900">Weekly Health Digest</p>
+              <p className="text-sm text-slate-500 mt-1">
+                Receive a weekly summary of your symptoms, mood, medications and AI insights every Sunday.
+              </p>
+              {digestEnabled && (
+                <p className="text-xs text-blue-600 font-medium mt-2">
+                  Next digest: {nextSunday()} at 9:00 AM UTC
+                </p>
+              )}
+            </div>
+            {/* Toggle switch */}
+            <button
+              onClick={() => setDigestEnabled(!digestEnabled)}
+              className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors ${digestEnabled ? 'bg-blue-600' : 'bg-slate-300'
+                }`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full 
+                shadow transition-transform ${digestEnabled ? 'translate-x-6' : 'translate-x-0'}`}
+              />
+            </button>
+          </div>
+
+          <button
+            onClick={savePreferences}
+            disabled={saving}
+            className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 
+              text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save Preferences'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ChartCard({ title, data, type = 'line' }) {
   // Debug (you can remove later)
