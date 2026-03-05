@@ -240,6 +240,10 @@ export default function MediTrackApp() {
           <InsightsPage user={user} setCurrentPage={setCurrentPage} />
         )}
 
+        {currentPage === 'history' && user && (
+          <HistoryPage user={user} setCurrentPage={setCurrentPage} />
+        )}
+
       </div>
     </div>
   );
@@ -602,7 +606,9 @@ function DashboardPage({ user, setCurrentPage, downloadPDF }) {
         <NavCard icon={<Pill className="w-6 h-6" />} label="Medications" onClick={() => setCurrentPage('medications')} />
         <NavCard icon={<Activity className="w-6 h-6" />} label="Symptoms" onClick={() => setCurrentPage('symptoms')} />
         <NavCard icon={<Brain className="w-6 h-6" />} label="AI Insights" onClick={() => setCurrentPage('insights')} />
+        <NavCard icon={<Calendar className="w-6 h-6" />}  label="History"     onClick={() => setCurrentPage('history')} />
         <NavCard icon={<Settings className="w-6 h-6" />} label="Settings" onClick={() => setCurrentPage('profile')} />
+
       </div>
 
       {/* Stats Cards */}
@@ -1320,6 +1326,118 @@ function ChartCard({ title, data, type = 'line' }) {
           <Line data={data} options={options} />
         )}
       </div>
+    </div>
+  );
+}
+
+function HistoryPage({ user, setCurrentPage }) {
+  const [symptoms, setSymptoms] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { fetchHistory(); }, []);
+
+  const fetchHistory = async () => {
+    try {
+      setLoading(true);
+      const data = await apiCall('/symptoms/last_seven_days/');
+      setSymptoms(data);
+    } catch (err) {
+      console.error('Error fetching history:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getSeverityColor = (severity) => {
+    if (severity <= 3) return 'bg-green-100 text-green-800 border-green-200';
+    if (severity <= 6) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    return 'bg-red-100 text-red-800 border-red-200';
+  };
+
+  const getSeverityLabel = (severity) => {
+    if (severity <= 3) return 'Mild';
+    if (severity <= 6) return 'Moderate';
+    return 'Severe';
+  };
+
+  // Group symptoms by date
+  const grouped = symptoms.reduce((acc, s) => {
+    const d = s.date;
+    if (!acc[d]) acc[d] = [];
+    acc[d].push(s);
+    return acc;
+  }, {});
+
+  return (
+    <div className="p-6 space-y-6 max-w-3xl mx-auto">
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => setCurrentPage('dashboard')}
+          className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+        >
+          ← Back to Dashboard
+        </button>
+        <h2 className="text-3xl font-bold text-slate-900">Recent History</h2>
+      </div>
+
+      <p className="text-slate-500 text-sm">Symptoms logged in the last 7 days</p>
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <Loader className="w-6 h-6 text-blue-600 animate-spin" />
+        </div>
+      ) : Object.keys(grouped).length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
+          <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-500">No symptoms logged in the last 7 days</p>
+          <button
+            onClick={() => setCurrentPage('symptoms')}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          >
+            Log a Symptom
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {Object.entries(grouped)
+            .sort(([a], [b]) => new Date(b) - new Date(a))
+            .map(([date, daySymptoms]) => (
+              <div key={date}>
+                {/* Date header */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full" />
+                  <p className="text-sm font-semibold text-slate-700">
+                    {new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
+                      weekday: 'long', month: 'long', day: 'numeric'
+                    })}
+                  </p>
+                  <div className="flex-1 h-px bg-slate-200" />
+                  <span className="text-xs text-slate-400">
+                    {daySymptoms.length} {daySymptoms.length === 1 ? 'entry' : 'entries'}
+                  </span>
+                </div>
+
+                {/* Symptom cards for this day */}
+                <div className="space-y-2 ml-5">
+                  {daySymptoms.map(s => (
+                    <div key={s.id}
+                      className="bg-white rounded-lg border border-slate-200 p-4 flex items-start justify-between hover:shadow-sm transition-all">
+                      <div>
+                        <p className="font-semibold text-slate-900">{s.name}</p>
+                        {s.notes && <p className="text-sm text-slate-500 mt-1 italic">{s.notes}</p>}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getSeverityColor(s.severity)}`}>
+                          {getSeverityLabel(s.severity)} · {s.severity}/10
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 }
