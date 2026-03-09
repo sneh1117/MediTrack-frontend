@@ -10,7 +10,10 @@ A React dashboard for managing medications, tracking symptoms, logging mood, exp
 
 ## 🚀 Features
 
-- User registration & login with JWT authentication
+- **Authentication:**
+  - User registration & login with JWT authentication
+  - Google OAuth integration for one-click sign-in
+  - Secure token-based session management
 - Add, edit, and manage medications with frequency scheduling
 - Log and track daily symptoms with severity ratings (1-10)
 - Mood logging (1-5 scale) with trend tracking
@@ -35,6 +38,8 @@ A React dashboard for managing medications, tracking symptoms, logging mood, exp
 | Styling | Tailwind CSS |
 | Charts | Chart.js + react-chartjs-2 |
 | Icons | Lucide React |
+| Authentication | JWT + Google OAuth 2.0 |
+| OAuth Library | @react-oauth/google |
 | Deployment | Vercel |
 
 ---
@@ -61,6 +66,8 @@ Visit `http://localhost:5173`
 
 ## ⚙️ Configuration
 
+### API URL Setup
+
 Update the API URL in `src/App.jsx` line 8:
 
 ```javascript
@@ -70,6 +77,39 @@ const API_BASE_URL = 'http://127.0.0.1:8000/api';
 // Production
 const API_BASE_URL = 'https://meditrack.up.railway.app/api';
 ```
+
+### Google OAuth Setup
+
+**1. Create Environment Variable:**
+
+Create a `.env` file in the root directory:
+
+```env
+VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+```
+
+**2. Get Google OAuth Credentials:**
+
+- Go to [Google Cloud Console](https://console.cloud.google.com)
+- Create a new project or select existing one
+- Enable Google+ API
+- Go to **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID**
+- Application type: **Web application**
+- Authorized JavaScript origins:
+  - `http://localhost:5173` (for development)
+  - `https://meditrack7.vercel.app` (for production)
+- Authorized redirect URIs:
+  - `http://localhost:5173`
+  - `https://meditrack7.vercel.app`
+- Copy the **Client ID** and add it to `.env`
+
+**3. Vercel Deployment:**
+
+For production, add the environment variable in Vercel:
+- Go to your Vercel project settings
+- Navigate to **Environment Variables**
+- Add `VITE_GOOGLE_CLIENT_ID` with your Client ID
+- Redeploy your application
 
 ---
 
@@ -88,6 +128,29 @@ vercel
 
 Or connect your GitHub repo to the Vercel dashboard for automatic deployments on every push.
 
+**Important:** Make sure to add `VITE_GOOGLE_CLIENT_ID` environment variable in Vercel settings before deploying.
+
+---
+
+## 🔐 Authentication Flow
+
+### Traditional Login
+1. User enters username and password
+2. Backend validates credentials
+3. JWT tokens returned and stored in localStorage
+4. User redirected to dashboard
+
+### Google OAuth Login
+1. User clicks "Sign in with Google" button
+2. Google authentication popup appears
+3. User selects Google account
+4. Google returns credential token
+5. Frontend sends token to backend `/auth/google/` endpoint
+6. Backend verifies token with Google's API
+7. **Existing user:** JWT tokens returned → auto login
+8. **New user:** User data returned → username selection page
+9. User picks username and role → account created → auto login
+
 ---
 
 ## 📱 Pages
@@ -95,8 +158,9 @@ Or connect your GitHub repo to the Vercel dashboard for automatic deployments on
 | Page | Description |
 |------|-------------|
 | Landing | Marketing page with feature overview |
-| Login | JWT authentication |
-| Register | Create patient or doctor account |
+| Login | JWT authentication + Google OAuth |
+| Register | Create patient or doctor account + Google OAuth |
+| Google Register | Username picker for new Google users |
 | Dashboard | Stats, charts, and quick navigation |
 | Medications | Add, view, and delete medications |
 | Symptoms | Log and view symptom history |
@@ -128,8 +192,10 @@ From the Settings page, patients can toggle the **Weekly Health Digest** email o
 src/
 ├── App.jsx          # Main app — all pages and components
 ├── LandingPage.jsx  # Landing page component
-├── main.jsx         # Entry point
+├── main.jsx         # Entry point with GoogleOAuthProvider
 └── index.css        # Global styles
+
+.env                 # Environment variables (not committed)
 ```
 
 ---
@@ -141,10 +207,28 @@ src/
 - Verify `API_BASE_URL` in `src/App.jsx`
 - Check Django `CORS_ALLOWED_ORIGINS` includes `http://localhost:5173`
 
+**Google OAuth Errors:**
+
+**"Origin not allowed for the given client ID"**
+- Verify `http://localhost:5173` is in Google Console authorized origins
+- Wait 5-10 minutes for Google's changes to propagate
+- Check Client ID in `.env` matches Google Console
+
+**"Google sign in failed"**
+- Check `VITE_GOOGLE_CLIENT_ID` is set correctly in `.env`
+- Clear browser cache or try in incognito mode
+- Verify Google+ API is enabled in Google Cloud Console
+
+**Google button doesn't appear:**
+- Check browser console for Client ID loading message
+- Verify `@react-oauth/google` is installed: `npm install @react-oauth/google`
+- Make sure `GoogleOAuthProvider` is wrapping the app in `main.jsx`
+
 **Module Not Found:**
 ```bash
 npm install lucide-react
 npm install chart.js react-chartjs-2
+npm install @react-oauth/google
 ```
 
 **Port Already in Use:**
@@ -183,6 +267,13 @@ GitHub: [sneh1117](https://github.com/sneh1117)
 
 ## 📋 Changelog
 
+### Version 2.1
+- **Google OAuth Integration**
+  - One-click sign-in/sign-up with Google
+  - Automatic email and name population
+  - Streamlined username selection for new users
+  - Secure server-side token verification
+
 ### Version 2.0
 - PDF health report export with date range selector
 - Weekly email digest toggle in settings
@@ -196,3 +287,25 @@ GitHub: [sneh1117](https://github.com/sneh1117)
 ### Version 1.0
 - Initial release
 - JWT auth, medications, symptoms, AI insights
+
+---
+
+## 🔒 Security Notes
+
+- Google OAuth tokens are verified server-side
+- JWT tokens stored in localStorage (consider httpOnly cookies for production)
+- CORS properly configured for cross-origin requests
+- OAuth users have no password (unusable password set in backend)
+- Environment variables used for sensitive credentials
+
+---
+
+## 🌐 Environment Variables
+
+Required environment variables:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `VITE_GOOGLE_CLIENT_ID` | Google OAuth Client ID | `123456.apps.googleusercontent.com` |
+
+For local development, create a `.env` file. For Vercel deployment, add these in the project settings.
