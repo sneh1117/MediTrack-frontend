@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { GoogleLogin } from '@react-oauth/google'
+
 import {
   Heart, LogOut, Plus, Trash2, Eye, EyeOff, ChevronRight,
   AlertCircle, CheckCircle, Clock, TrendingUp, Brain, Activity,
@@ -223,7 +225,8 @@ export default function MediTrackApp() {
       <div className="max-w-7xl mx-auto">
         {!user && currentPage === 'landing' && <LandingPage setCurrentPage={setCurrentPage} />}
         {currentPage === 'login' && <LoginPage onSuccess={fetchProfile} setCurrentPage={setCurrentPage} />}
-        {currentPage === 'register' && <RegisterPage setCurrentPage={setCurrentPage} />}
+        {currentPage === 'register' && <RegisterPage setCurrentPage={setCurrentPage} onSuccess={fetchProfile} />}
+        {currentPage === 'google-register' && <GoogleRegisterPage setCurrentPage={setCurrentPage} onSuccess={fetchProfile} />}
         {currentPage === 'dashboard' && user && (
           <DashboardPage user={user} setCurrentPage={setCurrentPage} downloadPDF={downloadPDF} />  // ← downloadPDF here
         )}
@@ -249,7 +252,6 @@ export default function MediTrackApp() {
   );
 }
 
-// Login Page - FIXED
 function LoginPage({ onSuccess, setCurrentPage }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -265,7 +267,6 @@ function LoginPage({ onSuccess, setCurrentPage }) {
     try {
       console.log('Attempting login with:', { username: email, password });
 
-      // ⭐ Use API_BASE_URL instead of hardcoded URL
       const response = await fetch(`${API_BASE_URL}/auth/login/`, {
         method: 'POST',
         headers: {
@@ -287,7 +288,6 @@ function LoginPage({ onSuccess, setCurrentPage }) {
         return;
       }
 
-      // Handle both response formats
       const tokens = data.data || data;
 
       if (!tokens.access) {
@@ -302,6 +302,42 @@ function LoginPage({ onSuccess, setCurrentPage }) {
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Login failed. Is the server running?');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ⭐ NEW: Google Login Handler
+  const handleGoogleLogin = async (credentialResponse) => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/google/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: credentialResponse.credential }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Google sign in failed');
+        return;
+      }
+
+      if (data.is_new_user) {
+        // Store Google data temporarily and go to username picker
+        localStorage.setItem('google_pending', JSON.stringify(data));
+        setCurrentPage('google-register');
+      } else {
+        localStorage.setItem('access_token', data.access);
+        localStorage.setItem('refresh_token', data.refresh);
+        onSuccess();
+      }
+    } catch (err) {
+      setError('Google sign in failed. Try again.');
     } finally {
       setLoading(false);
     }
@@ -367,6 +403,26 @@ function LoginPage({ onSuccess, setCurrentPage }) {
             </button>
           </form>
 
+          {/* ⭐ NEW: Google Sign In Button */}
+          <div className="mt-6">
+            <div className="relative flex items-center justify-center mb-4">
+              <div className="border-t border-slate-200 w-full" />
+              <span className="bg-white px-3 text-xs text-slate-400 absolute">or</span>
+            </div>
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleLogin}
+                onError={() => setError('Google sign in failed')}
+                useOneTap
+                shape="rectangular"
+                theme="outline"
+                size="large"
+                text="signin_with"
+                width="368"
+              />
+            </div>
+          </div>
+
           <p className="text-center text-slate-600 text-sm mt-6">
             Don't have an account?{' '}
             <button
@@ -381,8 +437,8 @@ function LoginPage({ onSuccess, setCurrentPage }) {
     </div>
   );
 }
-// Register Page
-function RegisterPage({ setCurrentPage }) {
+// Register Page with Google OAuth
+function RegisterPage({ setCurrentPage, onSuccess }) {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -426,6 +482,43 @@ function RegisterPage({ setCurrentPage }) {
       setCurrentPage('login');
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ⭐ NEW: Google Login Handler
+  const handleGoogleLogin = async (credentialResponse) => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/google/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: credentialResponse.credential }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Google sign up failed');
+        return;
+      }
+
+      if (data.is_new_user) {
+        // Store Google data temporarily and go to username picker
+        localStorage.setItem('google_pending', JSON.stringify(data));
+        setCurrentPage('google-register');
+      } else {
+        // User already exists, just log them in
+        localStorage.setItem('access_token', data.access);
+        localStorage.setItem('refresh_token', data.refresh);
+        onSuccess();
+      }
+    } catch (err) {
+      setError('Google sign up failed. Try again.');
     } finally {
       setLoading(false);
     }
@@ -515,6 +608,26 @@ function RegisterPage({ setCurrentPage }) {
             </button>
           </form>
 
+          {/* ⭐ NEW: Google Sign Up Button */}
+          <div className="mt-6">
+            <div className="relative flex items-center justify-center mb-4">
+              <div className="border-t border-slate-200 w-full" />
+              <span className="bg-white px-3 text-xs text-slate-400 absolute">or</span>
+            </div>
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleLogin}
+                onError={() => setError('Google sign up failed')}
+                useOneTap
+                shape="rectangular"
+                theme="outline"
+                size="large"
+                text="signup_with"
+                width="368"
+              />
+            </div>
+          </div>
+
           <p className="text-center text-slate-600 text-sm mt-6">
             Already have an account?{' '}
             <button
@@ -529,6 +642,123 @@ function RegisterPage({ setCurrentPage }) {
     </div>
   );
 }
+// Google Register Completion Page
+function GoogleRegisterPage({ setCurrentPage, onSuccess }) {
+  const pending = JSON.parse(localStorage.getItem('google_pending') || '{}');
+  const [username, setUsername] = useState('');
+  const [role, setRole] = useState('patient');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleComplete = async (e) => {
+    e.preventDefault();
+    if (!username.trim()) {
+      setError('Username is required');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/google/complete/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: pending.email,
+          username,
+          google_id: pending.google_id,
+          name: pending.name,
+          role,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Registration failed');
+        return;
+      }
+
+      localStorage.removeItem('google_pending');
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('refresh_token', data.refresh);
+      onSuccess();
+    } catch (err) {
+      setError(err.message || 'Failed to complete registration');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Heart className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900">Almost there!</h2>
+          <p className="text-slate-500 mt-2">
+            Signing in as <strong>{pending.email}</strong>
+          </p>
+          <p className="text-slate-400 text-sm mt-1">
+            Just pick a username to finish setting up your account
+          </p>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleComplete} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Choose a Username
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="e.g. sneha_health"
+              className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              I am a
+            </label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="patient">Patient</option>
+              <option value="doctor">Doctor</option>
+            </select>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 mt-2"
+          >
+            {loading ? 'Setting up account...' : 'Complete Sign Up →'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+//Dashboard Page
 function DashboardPage({ user, setCurrentPage, downloadPDF }) {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
