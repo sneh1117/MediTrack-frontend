@@ -1,5 +1,13 @@
 # MediTrack Frontend
 
+![React](https://img.shields.io/badge/React-18-blue)
+![Vite](https://img.shields.io/badge/Vite-Build%20Tool-purple)
+![Tailwind](https://img.shields.io/badge/TailwindCSS-Styling-blue)
+![Chart.js](https://img.shields.io/badge/Chart.js-Data%20Visualization-orange)
+![Google OAuth](https://img.shields.io/badge/Auth-Google%20OAuth-red)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-success)](https://meditrack7.vercel.app)
+[![API Docs](https://img.shields.io/badge/API-Docs-blue)](https://meditrack.up.railway.app/api/docs/)
+
 A React dashboard for managing medications, tracking symptoms, logging mood, exporting health reports, and getting AI-powered health insights.
 
 **Live App:** https://meditrack7.vercel.app  
