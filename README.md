@@ -3,8 +3,10 @@
 A React dashboard for managing medications, tracking symptoms, logging mood, exporting health reports, and getting AI-powered health insights.
 
 **Live App:** https://meditrack7.vercel.app  
-**Backend API:** https://meditrack.up.railway.app  
+<img width="1282" height="717" alt="image" src="https://github.com/user-attachments/assets/9d6b2ea4-24ab-4ba8-8a1b-732da5d0201d" />
+ 
 **API Docs:** https://meditrack.up.railway.app/api/docs/
+<img width="1363" height="716" alt="Screenshot 2026-03-09 165623" src="https://github.com/user-attachments/assets/0720975c-ab9e-46f6-a3ac-af7b62aa9910" />
 
 ---
 
@@ -28,6 +30,33 @@ A React dashboard for managing medications, tracking symptoms, logging mood, exp
 - Doctor and patient role support
 
 ---
+<img width="1345" height="612" alt="image" src="https://github.com/user-attachments/assets/3b319070-d8d6-4072-8d5e-2d6b0edb237f" />
+
+
+<img width="1347" height="616" alt="image" src="https://github.com/user-attachments/assets/c9ed66ae-6ca4-4086-b56a-b7856651c462" />
+
+
+<img width="698" height="586" alt="image" src="https://github.com/user-attachments/assets/3d97d90e-76e5-41bc-8600-a46fcfe73afd" />
+
+<img width="1350" height="630" alt="image" src="https://github.com/user-attachments/assets/4544afc7-ebd9-4fa5-a05e-52c88d7cf1ee" />
+
+<img width="1342" height="571" alt="image" src="https://github.com/user-attachments/assets/8541efca-2c05-4162-93fb-f94034eb8a88" />
+
+<img width="1322" height="609" alt="image" src="https://github.com/user-attachments/assets/bb9a7609-c2c5-4afa-8b75-1861f30e1315" />
+
+<img width="1317" height="456" alt="image" src="https://github.com/user-attachments/assets/30e555bd-1363-490b-bbbb-e06c0f220e74" />
+
+<img width="1322" height="571" alt="image" src="https://github.com/user-attachments/assets/aaeeb7bb-a215-41e8-a31d-4173029e57d9" />
+
+<img width="1324" height="524" alt="image" src="https://github.com/user-attachments/assets/a57b9154-21cb-4704-a891-54769845a809" />
+
+
+
+
+
+
+
+
 
 ## 🛠️ Tech Stack
 
