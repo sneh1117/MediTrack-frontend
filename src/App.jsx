@@ -1843,27 +1843,113 @@ ChartJS.register(
   Legend
 );
 
+// Updated ProfilePage with Editable Fields
 function ProfilePage({ user, setCurrentPage, showToast }) {
-  const [digestEnabled, setDigestEnabled] = useState(user.email_digest_enabled ?? true);
+  const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    username: user.username || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    date_of_birth: user.date_of_birth || '',
+    email_digest_enabled: user.email_digest_enabled ?? true,
+  });
+  const [errors, setErrors] = useState({});
 
-  const savePreferences = async () => {
+  // Validate form data
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Invalid email format';
+    }
+
+    if (formData.phone && !/^\+?[\d\s\-()]{7,20}$/.test(formData.phone)) {
+      newErrors.phone = 'Invalid phone number format';
+    }
+
+    if (formData.date_of_birth) {
+      const birthDate = new Date(formData.date_of_birth);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      
+      if (birthDate > today) {
+        newErrors.date_of_birth = 'Date of birth cannot be in the future';
+      } else if (age > 150) {
+        newErrors.date_of_birth = 'Invalid date of birth';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) {
+      showToast('Please fix the errors before saving', 'error');
+      return;
+    }
+
     setSaving(true);
     try {
+      const payload = {
+        username: formData.username,
+        email: formData.email,
+        phone: formData.phone || '',
+        date_of_birth: formData.date_of_birth || null,
+        email_digest_enabled: formData.email_digest_enabled,
+      };
+
       await apiCall('/auth/profile/', {
         method: 'PATCH',
-        body: JSON.stringify({ email_digest_enabled: digestEnabled }),
-
+        body: JSON.stringify(payload),
       });
-      showToast('Preferences saved!', 'success');
+
+      // Update local user state (you might want to refetch profile here)
+      showToast('Profile updated successfully!', 'success');
+      setIsEditing(false);
+      
+      // Optional: Trigger a profile refetch in parent component
+      // You might want to add a callback prop like onProfileUpdate()
     } catch (err) {
-      showToast(`Failed: ${err.message}`, 'error');
+      const errorMessage = err.message;
+      try {
+        const errorData = JSON.parse(errorMessage);
+        if (errorData.username) {
+          setErrors({ username: errorData.username[0] });
+        } else if (errorData.email) {
+          setErrors({ email: errorData.email[0] });
+        } else {
+          showToast('Failed to update profile', 'error');
+        }
+      } catch {
+        showToast('Failed to update profile', 'error');
+      }
     } finally {
       setSaving(false);
     }
   };
 
-  // Calculate next Sunday
+  const handleCancel = () => {
+    setFormData({
+      username: user.username || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      date_of_birth: user.date_of_birth || '',
+      email_digest_enabled: user.email_digest_enabled ?? true,
+    });
+    setErrors({});
+    setIsEditing(false);
+  };
+
   const nextSunday = () => {
     const d = new Date();
     d.setDate(d.getDate() + ((7 - d.getDay()) % 7 || 7));
@@ -1872,35 +1958,224 @@ function ProfilePage({ user, setCurrentPage, showToast }) {
 
   return (
     <div className="p-6 space-y-6 max-w-2xl mx-auto">
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => setCurrentPage('dashboard')}
-          className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm font-medium text-slate-900 dark:text-slate-100"
-        >
-          ← Back to Dashboard
-        </button>
-        <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Settings</h2>
-      </div>
-
-      {/* Profile Info */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
-        <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-lg">Profile</h3>
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { label: 'Username', value: user.username },
-            { label: 'Email', value: user.email || '—' },
-            { label: 'Role', value: user.role },
-            { label: 'Phone', value: user.phone || '—' },
-          ].map(({ label, value }) => (
-            <div key={label} className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{label}</p>
-              <p className="font-medium text-slate-900 dark:text-slate-100 capitalize">{value}</p>
-            </div>
-          ))}
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setCurrentPage('dashboard')}
+            className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm font-medium text-slate-900 dark:text-slate-100"
+          >
+            ← Back to Dashboard
+          </button>
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Settings</h2>
         </div>
+        
+        {!isEditing && (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium"
+          >
+            <Settings className="w-4 h-4" />
+            Edit Profile
+          </button>
+        )}
       </div>
 
-      {/* Email Preferences — patients only */}
+      {/* Profile Info Card */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-lg">Profile Information</h3>
+          {isEditing && (
+            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+              Editing Mode
+            </span>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          {/* Username */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Username {isEditing && <span className="text-red-500">*</span>}
+            </label>
+            {isEditing ? (
+              <>
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  className={`w-full px-4 py-2 rounded-lg border ${
+                    errors.username 
+                      ? 'border-red-300 dark:border-red-600' 
+                      : 'border-slate-300 dark:border-slate-600'
+                  } dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  placeholder="Enter username"
+                />
+                {errors.username && (
+                  <p className="text-red-600 dark:text-red-400 text-xs mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.username}
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">
+                <p className="font-medium text-slate-900 dark:text-slate-100">{user.username}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Email {isEditing && <span className="text-red-500">*</span>}
+            </label>
+            {isEditing ? (
+              <>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className={`w-full px-4 py-2 rounded-lg border ${
+                    errors.email 
+                      ? 'border-red-300 dark:border-red-600' 
+                      : 'border-slate-300 dark:border-slate-600'
+                  } dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  placeholder="your@email.com"
+                />
+                {errors.email && (
+                  <p className="text-red-600 dark:text-red-400 text-xs mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.email}
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">
+                <p className="font-medium text-slate-900 dark:text-slate-100">{user.email || '—'}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Phone Number
+            </label>
+            {isEditing ? (
+              <>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className={`w-full px-4 py-2 rounded-lg border ${
+                    errors.phone 
+                      ? 'border-red-300 dark:border-red-600' 
+                      : 'border-slate-300 dark:border-slate-600'
+                  } dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  placeholder="+1 (555) 123-4567"
+                />
+                {errors.phone && (
+                  <p className="text-red-600 dark:text-red-400 text-xs mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.phone}
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">
+                <p className="font-medium text-slate-900 dark:text-slate-100">{user.phone || '—'}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Date of Birth */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Date of Birth
+            </label>
+            {isEditing ? (
+              <>
+                <input
+                  type="date"
+                  value={formData.date_of_birth}
+                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                  max={new Date().toISOString().split('T')[0]}
+                  className={`w-full px-4 py-2 rounded-lg border ${
+                    errors.date_of_birth 
+                      ? 'border-red-300 dark:border-red-600' 
+                      : 'border-slate-300 dark:border-slate-600'
+                  } dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                />
+                {errors.date_of_birth && (
+                  <p className="text-red-600 dark:text-red-400 text-xs mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.date_of_birth}
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">
+                <p className="font-medium text-slate-900 dark:text-slate-100">
+                  {user.date_of_birth 
+                    ? new Date(user.date_of_birth + 'T00:00:00').toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })
+                    : '—'
+                  }
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Role (Read-only) */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Role
+            </label>
+            <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">
+              <p className="font-medium text-slate-900 dark:text-slate-100 capitalize flex items-center gap-2">
+                {user.role}
+                <span className="text-xs text-slate-500 dark:text-slate-400">(Cannot be changed)</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        {isEditing && (
+          <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Save Changes
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={saving}
+              className="px-6 py-3 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-900 dark:text-slate-100 font-medium disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Email Preferences (patients only) */}
       {user.role === 'patient' && (
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 space-y-5">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-lg flex items-center gap-2">
@@ -1908,39 +2183,56 @@ function ProfilePage({ user, setCurrentPage, showToast }) {
             Email Preferences
           </h3>
 
-          <div className="flex items-start justify-between gap-6 p-4 
-            bg-slate-50 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
+          <div className="flex items-start justify-between gap-6 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
             <div>
               <p className="font-medium text-slate-900 dark:text-slate-100">Weekly Health Digest</p>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Receive a weekly summary of your symptoms, mood, medications and AI insights every Sunday.
               </p>
-              {digestEnabled && (
+              {formData.email_digest_enabled && (
                 <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-2">
                   Next digest: {nextSunday()} at 9:00 AM UTC
                 </p>
               )}
             </div>
-            {/* Toggle switch */}
             <button
-              onClick={() => setDigestEnabled(!digestEnabled)}
-              className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors ${digestEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
-                }`}
+              onClick={() => setFormData({ ...formData, email_digest_enabled: !formData.email_digest_enabled })}
+              disabled={!isEditing && saving}
+              className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors ${
+                formData.email_digest_enabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
+              }`}
             >
-              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full 
-                shadow transition-transform ${digestEnabled ? 'translate-x-6' : 'translate-x-0'}`}
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  formData.email_digest_enabled ? 'translate-x-6' : 'translate-x-0'
+                }`}
               />
             </button>
           </div>
 
-          <button
-            onClick={savePreferences}
-            disabled={saving}
-            className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 
-              text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Preferences'}
-          </button>
+          {/* Save button for email preferences when not in full edit mode */}
+          {!isEditing && formData.email_digest_enabled !== user.email_digest_enabled && (
+            <button
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await apiCall('/auth/profile/', {
+                    method: 'PATCH',
+                    body: JSON.stringify({ email_digest_enabled: formData.email_digest_enabled }),
+                  });
+                  showToast('Email preferences updated!', 'success');
+                } catch (err) {
+                  showToast('Failed to update preferences', 'error');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              disabled={saving}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save Email Preferences'}
+            </button>
+          )}
         </div>
       )}
     </div>
