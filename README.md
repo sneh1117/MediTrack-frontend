@@ -24,6 +24,17 @@ A React dashboard for managing medications, tracking symptoms, logging mood, exp
   - User registration & login with JWT authentication
   - Google OAuth integration for one-click sign-in
   - Secure token-based session management
+- **Dark Mode:** 
+  - System preference detection
+  - Manual toggle in navbar
+  - Persistent theme selection (stored in localStorage)
+  - Smooth transitions throughout entire app
+- **Profile Management:**
+  - Fully editable user profile with real-time validation
+  - Update username, email, phone, and date of birth
+  - Role-based permissions (role cannot be changed after registration)
+  - Duplicate detection for username and email
+  - Toggle weekly email digest preferences
 - Add, edit, and manage medications with frequency scheduling
 - Log and track daily symptoms with severity ratings (1-10)
 - Mood logging (1-5 scale) with trend tracking
@@ -32,7 +43,7 @@ A React dashboard for managing medications, tracking symptoms, logging mood, exp
 - Weekly email digest toggle in profile settings
 - Interactive symptom trend and common symptoms charts
 - 7-day symptom history timeline
-- Settings page with profile info and email preferences
+- Settings page with editable profile info and email preferences
 - Toast notifications for all actions
 - Responsive design — works on mobile and desktop
 - Doctor and patient role support
@@ -72,7 +83,7 @@ A React dashboard for managing medications, tracking symptoms, logging mood, exp
 |-------|-----------|
 | Framework | React 18 |
 | Build Tool | Vite |
-| Styling | Tailwind CSS |
+| Styling | Tailwind CSS with Dark Mode |
 | Charts | Chart.js + react-chartjs-2 |
 | Icons | Lucide React |
 | Authentication | JWT + Google OAuth 2.0 |
@@ -150,6 +161,94 @@ For production, add the environment variable in Vercel:
 
 ---
 
+## 🌓 Dark Mode
+
+MediTrack includes a comprehensive dark mode that works throughout the entire application:
+
+### Features
+- **Automatic Detection:** Respects system dark mode preference on first load
+- **Manual Toggle:** Sun/Moon icon button in the navbar to switch themes
+- **Persistent:** Theme preference saved to localStorage
+- **Smooth Transitions:** All color changes animate smoothly
+- **Complete Coverage:** Every component, card, form, and page supports dark mode
+
+### Implementation
+The dark mode uses Tailwind CSS's built-in dark mode with the `class` strategy:
+
+```javascript
+// Theme is stored in localStorage as 'theme'
+// Applied to <html> element via 'dark' class
+// All components use dark: utility classes
+
+// Example:
+className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+```
+
+### Customization
+To modify dark mode colors, edit `tailwind.config.js`:
+
+```javascript
+theme: {
+  extend: {
+    colors: {
+      // Add custom dark mode colors here
+    }
+  }
+}
+```
+
+---
+
+## ⚙️ Editable Settings Page
+
+The Settings page allows users to edit their profile information with full validation:
+
+### Editable Fields
+- **Username** (required, min 3 characters)
+- **Email** (required, valid email format)
+- **Phone** (optional, validated format)
+- **Date of Birth** (optional, must be in the past)
+- **Email Digest Toggle** (patients only)
+
+### Features
+- **Edit Mode Toggle:** Click "Edit Profile" to enable editing
+- **Real-time Validation:** Instant feedback on form errors
+- **Duplicate Detection:** Backend validates unique username/email
+- **Save/Cancel:** Save changes or revert to original values
+- **Loading States:** Visual feedback during save operations
+- **Error Handling:** User-friendly error messages for all validation failures
+- **Role Protection:** User role is displayed but cannot be changed
+
+### Validation Rules
+
+| Field | Validation |
+|-------|-----------|
+| Username | Required, min 3 chars, must be unique |
+| Email | Required, valid format, must be unique |
+| Phone | Optional, 7-15 digits with +()- allowed |
+| Date of Birth | Optional, must be in past, max 150 years ago |
+| Email Digest | Boolean toggle (patients only) |
+
+### API Endpoint
+Settings updates use the profile endpoint:
+
+```javascript
+PATCH /api/auth/profile/
+```
+
+Request body:
+```json
+{
+  "username": "new_username",
+  "email": "new@email.com",
+  "phone": "+1 555-123-4567",
+  "date_of_birth": "1990-01-15",
+  "email_digest_enabled": true
+}
+```
+
+---
+
 ## 🏗️ Build & Deploy
 
 **Build for production:**
@@ -203,7 +302,7 @@ Or connect your GitHub repo to the Vercel dashboard for automatic deployments on
 | Symptoms | Log and view symptom history |
 | History | 7-day symptom timeline grouped by date |
 | AI Insights | Gemini-powered health analysis |
-| Settings | Profile info and email preferences |
+| Settings | **Editable profile info and email preferences** |
 
 ---
 
@@ -221,6 +320,8 @@ Patients can export a PDF health report directly from the dashboard. The report 
 
 From the Settings page, patients can toggle the **Weekly Health Digest** email on or off. The digest is sent every Sunday at 9:00 AM UTC and includes a summary of the past week's health data.
 
+**New in v2.2:** Email preferences can now be toggled independently even when not in full edit mode, and save instantly.
+
 ---
 
 ## 📁 Project Structure
@@ -230,9 +331,10 @@ src/
 ├── App.jsx          # Main app — all pages and components
 ├── LandingPage.jsx  # Landing page component
 ├── main.jsx         # Entry point with GoogleOAuthProvider
-└── index.css        # Global styles
+└── index.css        # Global styles with dark mode support
 
 .env                 # Environment variables (not committed)
+tailwind.config.js   # Tailwind config with dark mode enabled
 ```
 
 ---
@@ -260,6 +362,18 @@ src/
 - Check browser console for Client ID loading message
 - Verify `@react-oauth/google` is installed: `npm install @react-oauth/google`
 - Make sure `GoogleOAuthProvider` is wrapping the app in `main.jsx`
+
+**Dark Mode Not Working:**
+- Check `tailwind.config.js` has `darkMode: 'class'`
+- Verify `dark:` classes are present on components
+- Check browser console for theme loading errors
+- Clear localStorage and refresh page
+
+**Profile Update Errors:**
+- **"Username already taken"** — Try a different username
+- **"Email already taken"** — Email is registered to another account
+- **"Invalid phone format"** — Use format like +1 555-123-4567
+- **"Date cannot be in future"** — Check date of birth is in the past
 
 **Module Not Found:**
 ```bash
@@ -304,6 +418,23 @@ GitHub: [sneh1117](https://github.com/sneh1117)
 
 ## 📋 Changelog
 
+### Version 2.2 (Latest)
+- **Dark Mode**
+  - System preference detection on first load
+  - Manual toggle with sun/moon icon in navbar
+  - Persistent theme storage in localStorage
+  - Complete dark mode coverage across all pages
+  - Smooth color transitions
+  - Custom dark mode colors for all components
+- **Editable Settings Page**
+  - Edit profile information directly from settings
+  - Real-time validation with inline error messages
+  - Duplicate username/email detection
+  - Phone number and date of birth validation
+  - Independent email digest toggle
+  - Save/Cancel functionality with loading states
+  - Role displayed as read-only field
+
 ### Version 2.1
 - **Google OAuth Integration**
   - One-click sign-in/sign-up with Google
@@ -334,6 +465,8 @@ GitHub: [sneh1117](https://github.com/sneh1117)
 - CORS properly configured for cross-origin requests
 - OAuth users have no password (unusable password set in backend)
 - Environment variables used for sensitive credentials
+- Profile updates validated both client-side and server-side
+- Role field protected from modification after registration
 
 ---
 
@@ -346,3 +479,28 @@ Required environment variables:
 | `VITE_GOOGLE_CLIENT_ID` | Google OAuth Client ID | `123456.apps.googleusercontent.com` |
 
 For local development, create a `.env` file. For Vercel deployment, add these in the project settings.
+
+---
+
+## 🎨 UI/UX Features
+
+### Design System
+- **Color Palette:** Blue/Cyan gradient theme with dark mode variants
+- **Typography:** Inter font family for body, Sora for headings
+- **Components:** Consistent rounded corners, shadows, and hover states
+- **Icons:** Lucide React icon set throughout
+- **Responsive:** Mobile-first design with breakpoints for tablet and desktop
+
+### Accessibility
+- ARIA labels on interactive elements
+- Keyboard navigation support
+- Focus states on all interactive components
+- Color contrast ratios meet WCAG AA standards in both light and dark modes
+- Error messages associated with form fields
+
+### User Feedback
+- Toast notifications for all actions
+- Loading spinners during async operations
+- Success/error states with appropriate icons
+- Inline validation messages
+- Disabled states during form submission
