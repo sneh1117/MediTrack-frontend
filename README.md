@@ -419,7 +419,15 @@ GitHub: [sneh1117](https://github.com/sneh1117)
 
 ## 📋 Changelog
 
-### Version 2.2 (Latest)
+### Version 2.3 (Latest)
+- **Unit Tests & CI/CD Pipeline**
+  - 30 automated unit tests covering components and validation logic
+  - GitHub Actions CI pipeline running on every push and pull request
+  - Tests cover Toast, ThemeToggle, form validation, severity helpers, and sorting
+  - Build check runs automatically after tests pass
+  - Vitest + React Testing Library setup
+
+### Version 2.2
 - **Dark Mode**
   - System preference detection on first load
   - Manual toggle with sun/moon icon in navbar
