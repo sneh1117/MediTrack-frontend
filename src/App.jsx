@@ -21,7 +21,7 @@ import {
 import { Line, Bar } from 'react-chartjs-2';
 // API Service for now 
 //for localhost add const API_BASE_URL = 'http://localhost:8000/api';
-const API_BASE_URL = 'https://meditrack.up.railway.app/api';
+const API_BASE_URL = 'http://localhost:8000/api';//'https://meditrack.up.railway.app/api';
 
 const apiCall = async (endpoint, options = {}) => {
   const token = localStorage.getItem('access_token');
@@ -228,7 +228,11 @@ export default function MediTrackApp() {
         {currentPage === 'register' && <RegisterPage setCurrentPage={setCurrentPage} onSuccess={fetchProfile} />}
         {currentPage === 'google-register' && <GoogleRegisterPage setCurrentPage={setCurrentPage} onSuccess={fetchProfile} />}
         {currentPage === 'dashboard' && user && (
-          <DashboardPage user={user} setCurrentPage={setCurrentPage} downloadPDF={downloadPDF} />  // ← downloadPDF here
+          user.role === 'doctor' ? (
+            <DoctorDashboardPage user={user} setCurrentPage={setCurrentPage} downloadPDF={downloadPDF} />
+          ) : (
+            <DashboardPage user={user} setCurrentPage={setCurrentPage} downloadPDF={downloadPDF} />
+          )
         )}
         {currentPage === 'profile' && user && (
           <ProfilePage user={user} setCurrentPage={setCurrentPage} showToast={showToast} />  // ← this line exists
@@ -658,7 +662,7 @@ function GoogleRegisterPage({ setCurrentPage, onSuccess }) {
     }
     setLoading(true);
     setError('');
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/auth/google/complete/`, {
         method: 'POST',
@@ -836,7 +840,7 @@ function DashboardPage({ user, setCurrentPage, downloadPDF }) {
         <NavCard icon={<Pill className="w-6 h-6" />} label="Medications" onClick={() => setCurrentPage('medications')} />
         <NavCard icon={<Activity className="w-6 h-6" />} label="Symptoms" onClick={() => setCurrentPage('symptoms')} />
         <NavCard icon={<Brain className="w-6 h-6" />} label="AI Insights" onClick={() => setCurrentPage('insights')} />
-        <NavCard icon={<Calendar className="w-6 h-6" />}  label="History"     onClick={() => setCurrentPage('history')} />
+        <NavCard icon={<Calendar className="w-6 h-6" />} label="History" onClick={() => setCurrentPage('history')} />
         <NavCard icon={<Settings className="w-6 h-6" />} label="Settings" onClick={() => setCurrentPage('profile')} />
 
       </div>
@@ -858,6 +862,392 @@ function DashboardPage({ user, setCurrentPage, downloadPDF }) {
     </div>
   );
 }
+
+
+
+
+// Doctor Dashboard Page 
+// 🩺 Doctor Dashboard Component with Search & Sort
+function DoctorDashboardPage({ user, setCurrentPage, downloadPDF }) {
+  const [patients, setPatients] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientDetails, setPatientDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  
+  // ✨ NEW: Search and Sort states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [symptomSort, setSymptomSort] = useState('date'); // 'date' or 'severity'
+
+  useEffect(() => {
+    fetchPatients();
+  }, []);
+
+  const fetchPatients = async () => {
+    try {
+      setLoading(true);
+      const data = await apiCall('/auth/patients/');
+      setPatients(data);
+      
+      // Auto-select first patient if available
+      if (data.length > 0 && !selectedPatient) {
+        handleSelectPatient(data[0].id);
+      }
+    } catch (err) {
+      console.error('Error fetching patients:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectPatient = async (patientId) => {
+    try {
+      setDetailsLoading(true);
+      setSelectedPatient(patientId);
+      const data = await apiCall(`/auth/patients/${patientId}/`);
+      setPatientDetails(data);
+    } catch (err) {
+      console.error('Error fetching patient details:', err);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  // ✨ NEW: Filter patients by search query
+  const filteredPatients = patients.filter(patient => 
+    patient.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    patient.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // ✨ NEW: Sort symptoms
+  const getSortedSymptoms = (symptoms) => {
+    if (!symptoms) return [];
+    const sorted = [...symptoms];
+    if (symptomSort === 'severity') {
+      return sorted.sort((a, b) => b.severity - a.severity);
+    }
+    // Default: sort by date (most recent first)
+    return sorted.sort((a, b) => new Date(b.date) - new Date(a.date));
+  };
+
+  const getSeverityColor = (severity) => {
+    if (severity <= 3) return 'bg-green-100 text-green-800 border-green-200';
+    if (severity <= 6) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    return 'bg-red-100 text-red-800 border-red-200';
+  };
+
+  const getSeverityLabel = (severity) => {
+    if (severity <= 3) return 'Mild';
+    if (severity <= 6) return 'Moderate';
+    return 'Severe';
+  };
+
+  const getMoodEmoji = (mood) => {
+    const emojis = {
+      1: '😢',
+      2: '😟',
+      3: '😐',
+      4: '🙂',
+      5: '😄'
+    };
+    return emojis[mood] || '😐';
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader className="w-8 h-8 text-blue-600 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold text-slate-900">My Patients</h2>
+        <p className="text-slate-500 mt-1">Monitor and review patient health data</p>
+      </div>
+
+      {patients.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
+          <Activity className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-500">No patients assigned yet</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-12 gap-6">
+          {/* Left Panel: Patient List */}
+          <div className="col-span-12 lg:col-span-4 xl:col-span-3">
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-3">
+                <p className="text-white font-semibold text-sm">
+                  Patients ({filteredPatients.length})
+                </p>
+              </div>
+              
+              {/* ✨ NEW: Search Bar */}
+              <div className="p-4 border-b border-slate-200">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search patients..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-4 py-2 pl-10 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <MessageSquare className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                </div>
+              </div>
+
+              <div className="divide-y divide-slate-200 max-h-[calc(100vh-360px)] overflow-y-auto">
+                {filteredPatients.length === 0 ? (
+                  <div className="px-4 py-8 text-center">
+                    <p className="text-slate-500 text-sm">No patients found</p>
+                  </div>
+                ) : (
+                  filteredPatients.map((patient) => (
+                    <button
+                      key={patient.id}
+                      onClick={() => handleSelectPatient(patient.id)}
+                      className={`w-full text-left px-4 py-4 hover:bg-slate-50 transition-colors ${
+                        selectedPatient === patient.id ? 'bg-blue-50 border-l-4 border-blue-600' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
+                          selectedPatient === patient.id ? 'bg-blue-600' : 'bg-slate-400'
+                        }`}>
+                          {patient.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-semibold truncate ${
+                            selectedPatient === patient.id ? 'text-blue-900' : 'text-slate-900'
+                          }`}>
+                            {patient.username}
+                          </p>
+                          <p className="text-xs text-slate-500 truncate">{patient.email}</p>
+                        </div>
+                        <ChevronRight className={`w-5 h-5 flex-shrink-0 ${
+                          selectedPatient === patient.id ? 'text-blue-600' : 'text-slate-400'
+                        }`} />
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel: Patient Details */}
+          <div className="col-span-12 lg:col-span-8 xl:col-span-9">
+            {detailsLoading ? (
+              <div className="flex items-center justify-center py-20 bg-white rounded-xl border border-slate-200">
+                <Loader className="w-8 h-8 text-blue-600 animate-spin" />
+              </div>
+            ) : patientDetails ? (
+              <div className="space-y-6">
+                {/* Patient Info Card */}
+                <div className="bg-white rounded-xl border border-slate-200 p-6">
+                  <div className="flex items-start justify-between mb-6">
+                    <div>
+                      <h3 className="text-2xl font-bold text-slate-900">
+                        {patientDetails.patient.username}
+                      </h3>
+                      <p className="text-slate-500 text-sm mt-1">{patientDetails.patient.email}</p>
+                    </div>
+                    <div className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                      Read Only
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="bg-slate-50 rounded-lg p-3">
+                      <p className="text-xs text-slate-500 mb-1">Phone</p>
+                      <p className="font-medium text-slate-900">
+                        {patientDetails.patient.phone || '—'}
+                      </p>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-3">
+                      <p className="text-xs text-slate-500 mb-1">Date of Birth</p>
+                      <p className="font-medium text-slate-900">
+                        {patientDetails.patient.date_of_birth || '—'}
+                      </p>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-3">
+                      <p className="text-xs text-slate-500 mb-1">Patient ID</p>
+                      <p className="font-medium text-slate-900">
+                        #{patientDetails.patient.id}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Active Medications */}
+                <div className="bg-white rounded-xl border border-slate-200 p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Pill className="w-5 h-5 text-blue-600" />
+                    <h4 className="font-semibold text-slate-900">Active Medications</h4>
+                    <span className="text-xs text-slate-500">
+                      ({patientDetails.medications.length})
+                    </span>
+                  </div>
+                  
+                  {patientDetails.medications.length === 0 ? (
+                    <div className="text-center py-8 bg-slate-50 rounded-lg">
+                      <p className="text-slate-500 text-sm">No active medications</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {patientDetails.medications.map((med) => (
+                        <div key={med.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="font-semibold text-slate-900">{med.name}</p>
+                              <p className="text-sm text-slate-600">{med.dosage}</p>
+                            </div>
+                            <div className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                              {med.frequency.replace(/_/g, ' ')}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs text-slate-500 mt-3">
+                            <span>Started: {med.start_date}</span>
+                            {med.end_date && <span>Until: {med.end_date}</span>}
+                          </div>
+                          {med.notes && (
+                            <p className="text-xs text-slate-600 mt-2 italic bg-slate-50 p-2 rounded">
+                              {med.notes}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Recent Symptoms */}
+                <div className="bg-white rounded-xl border border-slate-200 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-5 h-5 text-red-600" />
+                      <h4 className="font-semibold text-slate-900">Recent Symptoms</h4>
+                      <span className="text-xs text-slate-500">
+                        (Last 20)
+                      </span>
+                    </div>
+                    
+                    {/* ✨ NEW: Sort Toggle */}
+                    {patientDetails.recent_symptoms.length > 0 && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setSymptomSort('date')}
+                          className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                            symptomSort === 'date'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          By Date
+                        </button>
+                        <button
+                          onClick={() => setSymptomSort('severity')}
+                          className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                            symptomSort === 'severity'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          By Severity
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {patientDetails.recent_symptoms.length === 0 ? (
+                    <div className="text-center py-8 bg-slate-50 rounded-lg">
+                      <p className="text-slate-500 text-sm">No symptoms logged</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {getSortedSymptoms(patientDetails.recent_symptoms).map((symptom) => (
+                        <div key={symptom.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="font-semibold text-slate-900">{symptom.name}</p>
+                              <p className="text-xs text-slate-500 mt-1">
+                                {new Date(symptom.date).toLocaleDateString('en-US', {
+                                  weekday: 'short',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })}
+                              </p>
+                              {symptom.notes && (
+                                <p className="text-sm text-slate-600 mt-2 italic">{symptom.notes}</p>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end gap-2 ml-4">
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getSeverityColor(symptom.severity)}`}>
+                                {getSeverityLabel(symptom.severity)}
+                              </span>
+                              <span className="text-xs text-slate-500 font-medium">
+                                {symptom.severity}/10
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Mood Logs */}
+                <div className="bg-white rounded-xl border border-slate-200 p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Brain className="w-5 h-5 text-purple-600" />
+                    <h4 className="font-semibold text-slate-900">Mood Logs</h4>
+                    <span className="text-xs text-slate-500">
+                      (Last 30 days)
+                    </span>
+                  </div>
+                  
+                  {patientDetails.mood_logs.length === 0 ? (
+                    <div className="text-center py-8 bg-slate-50 rounded-lg">
+                      <p className="text-slate-500 text-sm">No mood logs</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {patientDetails.mood_logs.map((mood) => (
+                        <div key={mood.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">{getMoodEmoji(mood.mood)}</span>
+                              <span className="font-semibold text-slate-900">{mood.mood_display}</span>
+                            </div>
+                            <span className="text-xs text-slate-500">
+                              {new Date(mood.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                          {mood.notes && (
+                            <p className="text-sm text-slate-600 italic mt-2">{mood.notes}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-20 bg-white rounded-xl border border-slate-200">
+                <p className="text-slate-500">Select a patient to view details</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 
 // Medications Page
 function MedicationsPage({ user, setCurrentPage }) {
