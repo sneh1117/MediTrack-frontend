@@ -1,5 +1,6 @@
 # MediTrack Frontend
 
+![Frontend CI](https://github.com/sneh1117/MediTrack-frontend/actions/workflows/react-ci.yml/badge.svg)
 ![React](https://img.shields.io/badge/React-18-blue)
 ![Vite](https://img.shields.io/badge/Vite-Build%20Tool-purple)
 ![Tailwind](https://img.shields.io/badge/TailwindCSS-Styling-blue)
