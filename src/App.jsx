@@ -7,6 +7,7 @@ import {
   Calendar, Pill, MessageSquare, Loader, Download, Settings,Moon, Sun, Bell
 } from 'lucide-react';
 import LandingPage from './LandingPage';
+import OnboardingWizard from './OnboardingWizard';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -73,7 +74,6 @@ function Toast({ message, type = 'success', onClose }) {
 }
 
 
-// ⭐ NEW: Theme Toggle Component
 function ThemeToggle() {
   const [isDark, setIsDark] = useState(false);
 
@@ -115,12 +115,20 @@ function ThemeToggle() {
 }
 
 
-// Main App - FIXED
+//for onboarding
+function shouldShowOnboarding(user){
+  if (!user || user.role !== 'patient') return false;
+  const key ='onboarding_complete_${user.id}';
+  return !localStorage.getItem(key);
+}
+
+// Main App 
 export default function MediTrackApp() {
 
   const [currentPage, setCurrentPage] = useState('landing');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showOnboarding,setShowOnboarding]=useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -141,7 +149,7 @@ export default function MediTrackApp() {
         return;
       }
 
-      // ⭐ Use API_BASE_URL instead of hardcoded URL
+      // Use API_BASE_URL instead of hardcoded URL
       const response = await fetch(`${API_BASE_URL}/auth/profile/`, {
         method: 'GET',
         headers: {
@@ -157,6 +165,11 @@ export default function MediTrackApp() {
         console.log('Profile data:', data);
         setUser(data);
         setCurrentPage('dashboard');
+
+        //For onboarding new patients
+        if (shouldShowOnboarding(data)){
+          setShowOnboarding(true);
+        }
       } else {
         console.log('Profile fetch failed');
         localStorage.clear();
@@ -213,7 +226,12 @@ export default function MediTrackApp() {
         />
       )}
 
-
+      {/* Onbaording wizard overlay */}
+      {showOnboarding && user && (
+        <OnboardingWizard
+        user={user}
+        onComplete={()=> setShowOnboarding(false)}/>
+      )}
 
 
 
