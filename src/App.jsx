@@ -116,9 +116,10 @@ function ThemeToggle() {
 
 
 //for onboarding
-function shouldShowOnboarding(user){
+function shouldShowOnboarding(user) {
   if (!user || user.role !== 'patient') return false;
-  const key ='onboarding_complete_${user.id}';
+  // Use username as key — avoids issues if API returns id under a different field name
+  const key = `onboarding_complete_${user.username}`;
   return !localStorage.getItem(key);
 }
 
@@ -166,9 +167,23 @@ export default function MediTrackApp() {
         setUser(data);
         setCurrentPage('dashboard');
 
-        //For onboarding new patients
-        if (shouldShowOnboarding(data)){
-          setShowOnboarding(true);
+       // Show onboarding only if: patient, no localStorage flag, AND no existing data
+        if (shouldShowOnboarding(data)) {
+          const token = localStorage.getItem('access_token');
+          const authHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+          const [medsRes, sympRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/medications/`, { headers: authHeaders }),
+            fetch(`${API_BASE_URL}/symptoms/`, { headers: authHeaders }),
+          ]);
+          const [meds, symp] = await Promise.all([medsRes.json(), sympRes.json()]);
+          const hasData = (Array.isArray(meds) ? meds.length : meds?.results?.length ?? 0) > 0
+                       || (Array.isArray(symp) ? symp.length : symp?.results?.length ?? 0) > 0;
+          if (hasData) {
+            // User already has data — mark complete silently so it never shows again
+            localStorage.setItem(`onboarding_complete_${data.username}`, 'true');
+          } else {
+            setShowOnboarding(true);
+          }
         }
       } else {
         console.log('Profile fetch failed');
