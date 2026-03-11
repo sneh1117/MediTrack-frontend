@@ -36,6 +36,16 @@ A React dashboard for managing medications, tracking symptoms, logging mood, exp
   - Role-based permissions (role cannot be changed after registration)
   - Duplicate detection for username and email
   - Toggle weekly email digest preferences
+- **Onboarding Wizard:** ⭐ New
+  - 3-step guided setup shown once to new patients after first login
+  - Step 1: Add first medication with full form (name, dosage, frequency, start date)
+  - Step 2: Log first symptom with severity slider and notes
+  - Step 3: Completion summary showing what was set up
+  - Smart one-time trigger — checks both localStorage flag AND live API data, so users who already have medications or symptoms never see it again
+  - Skip individual steps or dismiss entire wizard without losing progress
+  - Doctors excluded — wizard only shows for patients
+  - Fully responsive — scrollable on mobile, adapts gracefully to all screen sizes
+  - Animated step indicators with progress bar
 - Add, edit, and manage medications with frequency scheduling
 - Log and track daily symptoms with severity ratings (1-10)
 - Mood logging (1-5 scale) with trend tracking
@@ -70,13 +80,7 @@ A React dashboard for managing medications, tracking symptoms, logging mood, exp
 
 <img width="1324" height="524" alt="image" src="https://github.com/user-attachments/assets/a57b9154-21cb-4704-a891-54769845a809" />
 
-
-
-
-
-
-
-
+---
 
 ## 🛠️ Tech Stack
 
@@ -162,6 +166,59 @@ For production, add the environment variable in Vercel:
 
 ---
 
+## 🧙 Onboarding Wizard
+
+New patients are guided through a 3-step setup wizard the first time they log in. This improves activation rates by helping users add their first medication and symptom immediately after signup.
+
+### How It Works
+
+1. After login, the frontend fetches the user's profile
+2. If the user is a **patient** with no prior data, the wizard appears as a full-screen modal overlay
+3. Once completed or dismissed, a localStorage flag is set — it **never shows again**
+4. As a double safety net, the app also queries `/api/medications/` and `/api/symptoms/` before showing — users who already have data always skip the wizard even without the localStorage flag
+
+### Steps
+
+| Step | Description |
+|------|-------------|
+| 1 — Medication | Add first medication: name, dosage, frequency, start date, notes |
+| 2 — Symptom | Log first symptom: name, severity (1-10 slider), date, notes |
+| 3 — Done | Summary of what was set up, links to dashboard |
+
+### Key Design Decisions
+
+- **Non-blocking:** each step has a "Skip for now" button — users are never forced to complete it
+- **Doctors excluded:** wizard only triggers for `role === 'patient'`
+- **Idempotent:** uses both localStorage AND a live API check, so the trigger is reliable across browsers/devices
+- **Responsive:** full-screen overlay scrolls on mobile; compact layout on small screens with adaptive padding and font sizes
+
+### Component
+
+The wizard lives in `src/OnboardingWizard.jsx` as a standalone component imported into `App.jsx`:
+
+```jsx
+// App.jsx — trigger logic
+async function checkAndShowOnboarding(user) {
+  if (!user || user.role !== 'patient') return;
+  const key = `onboarding_complete_${user.username}`;
+  if (localStorage.getItem(key)) return;
+
+  // Check if user already has data
+  const [meds, symp] = await Promise.all([
+    fetch('/api/medications/', { headers }),
+    fetch('/api/symptoms/', { headers }),
+  ]);
+  const hasData = meds.length > 0 || symp.length > 0;
+  if (hasData) {
+    localStorage.setItem(key, 'true'); // silently mark done
+  } else {
+    setShowOnboarding(true);
+  }
+}
+```
+
+---
+
 ## 🌓 Dark Mode
 
 MediTrack includes a comprehensive dark mode that works throughout the entire application:
@@ -185,19 +242,6 @@ The dark mode uses Tailwind CSS's built-in dark mode with the `class` strategy:
 className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
 ```
 
-### Customization
-To modify dark mode colors, edit `tailwind.config.js`:
-
-```javascript
-theme: {
-  extend: {
-    colors: {
-      // Add custom dark mode colors here
-    }
-  }
-}
-```
-
 ---
 
 ## ⚙️ Editable Settings Page
@@ -211,15 +255,6 @@ The Settings page allows users to edit their profile information with full valid
 - **Date of Birth** (optional, must be in the past)
 - **Email Digest Toggle** (patients only)
 
-### Features
-- **Edit Mode Toggle:** Click "Edit Profile" to enable editing
-- **Real-time Validation:** Instant feedback on form errors
-- **Duplicate Detection:** Backend validates unique username/email
-- **Save/Cancel:** Save changes or revert to original values
-- **Loading States:** Visual feedback during save operations
-- **Error Handling:** User-friendly error messages for all validation failures
-- **Role Protection:** User role is displayed but cannot be changed
-
 ### Validation Rules
 
 | Field | Validation |
@@ -229,24 +264,6 @@ The Settings page allows users to edit their profile information with full valid
 | Phone | Optional, 7-15 digits with +()- allowed |
 | Date of Birth | Optional, must be in past, max 150 years ago |
 | Email Digest | Boolean toggle (patients only) |
-
-### API Endpoint
-Settings updates use the profile endpoint:
-
-```javascript
-PATCH /api/auth/profile/
-```
-
-Request body:
-```json
-{
-  "username": "new_username",
-  "email": "new@email.com",
-  "phone": "+1 555-123-4567",
-  "date_of_birth": "1990-01-15",
-  "email_digest_enabled": true
-}
-```
 
 ---
 
@@ -264,8 +281,6 @@ vercel
 ```
 
 Or connect your GitHub repo to the Vercel dashboard for automatic deployments on every push.
-
-**Important:** Make sure to add `VITE_GOOGLE_CLIENT_ID` environment variable in Vercel settings before deploying.
 
 ---
 
@@ -303,7 +318,7 @@ Or connect your GitHub repo to the Vercel dashboard for automatic deployments on
 | Symptoms | Log and view symptom history |
 | History | 7-day symptom timeline grouped by date |
 | AI Insights | Gemini-powered health analysis |
-| Settings | **Editable profile info and email preferences** |
+| Settings | Editable profile info and email preferences |
 
 ---
 
@@ -317,25 +332,18 @@ Patients can export a PDF health report directly from the dashboard. The report 
 
 ---
 
-## 🔔 Email Preferences
-
-From the Settings page, patients can toggle the **Weekly Health Digest** email on or off. The digest is sent every Sunday at 9:00 AM UTC and includes a summary of the past week's health data.
-
-**New in v2.2:** Email preferences can now be toggled independently even when not in full edit mode, and save instantly.
-
----
-
 ## 📁 Project Structure
 
 ```
 src/
-├── App.jsx          # Main app — all pages and components
-├── LandingPage.jsx  # Landing page component
-├── main.jsx         # Entry point with GoogleOAuthProvider
-└── index.css        # Global styles with dark mode support
+├── App.jsx              # Main app — all pages and components
+├── LandingPage.jsx      # Landing page component
+├── OnboardingWizard.jsx # ⭐ New patient onboarding wizard
+├── main.jsx             # Entry point with GoogleOAuthProvider
+└── index.css            # Global styles with dark mode support
 
-.env                 # Environment variables (not committed)
-tailwind.config.js   # Tailwind config with dark mode enabled
+.env                     # Environment variables (not committed)
+tailwind.config.js       # Tailwind config with dark mode enabled
 ```
 
 ---
@@ -347,52 +355,23 @@ tailwind.config.js   # Tailwind config with dark mode enabled
 - Verify `API_BASE_URL` in `src/App.jsx`
 - Check Django `CORS_ALLOWED_ORIGINS` includes `http://localhost:5173`
 
-**Google OAuth Errors:**
+**Onboarding Wizard keeps appearing:**
+- Open browser DevTools → Application → Local Storage
+- Check for key `onboarding_complete_<your_username>` — if missing, the wizard will show
+- If you have existing data but the wizard still shows, it will auto-dismiss and set the flag on next login
 
-**"Origin not allowed for the given client ID"**
+**Google OAuth Errors:**
 - Verify `http://localhost:5173` is in Google Console authorized origins
 - Wait 5-10 minutes for Google's changes to propagate
 - Check Client ID in `.env` matches Google Console
 
-**"Google sign in failed"**
-- Check `VITE_GOOGLE_CLIENT_ID` is set correctly in `.env`
-- Clear browser cache or try in incognito mode
-- Verify Google+ API is enabled in Google Cloud Console
-
-**Google button doesn't appear:**
-- Check browser console for Client ID loading message
-- Verify `@react-oauth/google` is installed: `npm install @react-oauth/google`
-- Make sure `GoogleOAuthProvider` is wrapping the app in `main.jsx`
-
 **Dark Mode Not Working:**
 - Check `tailwind.config.js` has `darkMode: 'class'`
-- Verify `dark:` classes are present on components
-- Check browser console for theme loading errors
 - Clear localStorage and refresh page
 
 **Profile Update Errors:**
 - **"Username already taken"** — Try a different username
 - **"Email already taken"** — Email is registered to another account
-- **"Invalid phone format"** — Use format like +1 555-123-4567
-- **"Date cannot be in future"** — Check date of birth is in the past
-
-**Module Not Found:**
-```bash
-npm install lucide-react
-npm install chart.js react-chartjs-2
-npm install @react-oauth/google
-```
-
-**Port Already in Use:**
-```bash
-# Kill process on port 5173
-npx kill-port 5173
-# Or change port in vite.config.js
-```
-
-**PDF Not Downloading:**
-- Make sure you're logged in as a **patient** account (doctors cannot export reports)
-- Check the backend is running and `reports/export/` endpoint is reachable
 
 ---
 
@@ -419,7 +398,16 @@ GitHub: [sneh1117](https://github.com/sneh1117)
 
 ## 📋 Changelog
 
-### Version 2.3 (Latest)
+### Version 2.4 (Latest) ⭐
+- **Onboarding Wizard**
+  - 3-step guided setup for new patients (medication → symptom → done)
+  - Smart one-time trigger using both localStorage and live API check
+  - Skip individual steps or dismiss entire wizard at any point
+  - Doctors excluded from onboarding flow
+  - Fully responsive — scrollable modal on mobile, adaptive layout at all breakpoints
+  - Animated step indicators, completion summary, and progress bar
+
+### Version 2.3
 - **Unit Tests & CI/CD Pipeline**
   - 30 automated unit tests covering components and validation logic
   - GitHub Actions CI pipeline running on every push and pull request
@@ -428,42 +416,17 @@ GitHub: [sneh1117](https://github.com/sneh1117)
   - Vitest + React Testing Library setup
 
 ### Version 2.2
-- **Dark Mode**
-  - System preference detection on first load
-  - Manual toggle with sun/moon icon in navbar
-  - Persistent theme storage in localStorage
-  - Complete dark mode coverage across all pages
-  - Smooth color transitions
-  - Custom dark mode colors for all components
-- **Editable Settings Page**
-  - Edit profile information directly from settings
-  - Real-time validation with inline error messages
-  - Duplicate username/email detection
-  - Phone number and date of birth validation
-  - Independent email digest toggle
-  - Save/Cancel functionality with loading states
-  - Role displayed as read-only field
+- **Dark Mode** — system preference detection, manual toggle, persistent storage
+- **Editable Settings Page** — real-time validation, duplicate detection, email digest toggle
 
 ### Version 2.1
-- **Google OAuth Integration**
-  - One-click sign-in/sign-up with Google
-  - Automatic email and name population
-  - Streamlined username selection for new users
-  - Secure server-side token verification
+- **Google OAuth Integration** — one-click sign-in/sign-up, streamlined username selection
 
 ### Version 2.0
-- PDF health report export with date range selector
-- Weekly email digest toggle in settings
-- Settings page with profile info and email preferences
-- 7-day symptom history timeline page
-- Toast notifications for all user actions
-- Settings link in navbar and dashboard
-- Interactive Chart.js dashboard charts
-- 5-card dashboard navigation
+- PDF health report export, weekly email digest toggle, 7-day history timeline, Chart.js charts
 
 ### Version 1.0
-- Initial release
-- JWT auth, medications, symptoms, AI insights
+- Initial release — JWT auth, medications, symptoms, AI insights
 
 ---
 
@@ -472,44 +435,6 @@ GitHub: [sneh1117](https://github.com/sneh1117)
 - Google OAuth tokens are verified server-side
 - JWT tokens stored in localStorage (consider httpOnly cookies for production)
 - CORS properly configured for cross-origin requests
-- OAuth users have no password (unusable password set in backend)
 - Environment variables used for sensitive credentials
 - Profile updates validated both client-side and server-side
 - Role field protected from modification after registration
-
----
-
-## 🌐 Environment Variables
-
-Required environment variables:
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `VITE_GOOGLE_CLIENT_ID` | Google OAuth Client ID | `123456.apps.googleusercontent.com` |
-
-For local development, create a `.env` file. For Vercel deployment, add these in the project settings.
-
----
-
-## 🎨 UI/UX Features
-
-### Design System
-- **Color Palette:** Blue/Cyan gradient theme with dark mode variants
-- **Typography:** Inter font family for body, Sora for headings
-- **Components:** Consistent rounded corners, shadows, and hover states
-- **Icons:** Lucide React icon set throughout
-- **Responsive:** Mobile-first design with breakpoints for tablet and desktop
-
-### Accessibility
-- ARIA labels on interactive elements
-- Keyboard navigation support
-- Focus states on all interactive components
-- Color contrast ratios meet WCAG AA standards in both light and dark modes
-- Error messages associated with form fields
-
-### User Feedback
-- Toast notifications for all actions
-- Loading spinners during async operations
-- Success/error states with appropriate icons
-- Inline validation messages
-- Disabled states during form submission
