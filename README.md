@@ -1,5 +1,6 @@
 # MediTrack Frontend
 
+![Frontend CI](https://github.com/sneh1117/MediTrack-frontend/actions/workflows/react-ci.yml/badge.svg)
 ![React](https://img.shields.io/badge/React-18-blue)
 ![Vite](https://img.shields.io/badge/Vite-Build%20Tool-purple)
 ![Tailwind](https://img.shields.io/badge/TailwindCSS-Styling-blue)
@@ -418,7 +419,15 @@ GitHub: [sneh1117](https://github.com/sneh1117)
 
 ## 📋 Changelog
 
-### Version 2.2 (Latest)
+### Version 2.3 (Latest)
+- **Unit Tests & CI/CD Pipeline**
+  - 30 automated unit tests covering components and validation logic
+  - GitHub Actions CI pipeline running on every push and pull request
+  - Tests cover Toast, ThemeToggle, form validation, severity helpers, and sorting
+  - Build check runs automatically after tests pass
+  - Vitest + React Testing Library setup
+
+### Version 2.2
 - **Dark Mode**
   - System preference detection on first load
   - Manual toggle with sun/moon icon in navbar
