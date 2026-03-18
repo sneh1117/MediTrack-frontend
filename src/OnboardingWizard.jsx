@@ -4,7 +4,7 @@ import {
     AlertCircle, Loader, Sparkles, ArrowRight, X, RefreshCw
 } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8000/api'; //'https://meditrack.up.railway.app/api';
+const API_BASE_URL = 'https://meditrack.up.railway.app/api';
 
 const apiCall = async (endpoint, options = {}) => {
     const token = localStorage.getItem('access_token');
