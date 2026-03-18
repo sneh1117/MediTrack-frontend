@@ -4,10 +4,11 @@ import { GoogleLogin } from '@react-oauth/google'
 import {
   Heart, LogOut, Plus, Trash2, Eye, EyeOff, ChevronRight,
   AlertCircle, CheckCircle, Clock, TrendingUp, Brain, Activity,
-  Calendar, Pill, MessageSquare, Loader, Download, Settings,Moon, Sun, Bell
+  Calendar, Pill, MessageSquare, Loader, Download, Settings, Moon, Sun, Bell
 } from 'lucide-react';
 import LandingPage from './LandingPage';
 import OnboardingWizard from './OnboardingWizard';
+import MedicationCalendar from './MedicationCalendar';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -81,7 +82,7 @@ function ThemeToggle() {
     // Check local storage or system preference on load
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
+
     if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
       setIsDark(true);
       document.documentElement.classList.add('dark');
@@ -95,7 +96,7 @@ function ThemeToggle() {
     const newTheme = isDark ? 'light' : 'dark';
     setIsDark(!isDark);
     localStorage.setItem('theme', newTheme);
-    
+
     if (!isDark) {
       document.documentElement.classList.add('dark');
     } else {
@@ -129,7 +130,7 @@ export default function MediTrackApp() {
   const [currentPage, setCurrentPage] = useState('landing');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showOnboarding,setShowOnboarding]=useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -167,7 +168,7 @@ export default function MediTrackApp() {
         setUser(data);
         setCurrentPage('dashboard');
 
-       // Show onboarding only if: patient, no localStorage flag, AND no existing data
+        // Show onboarding only if: patient, no localStorage flag, AND no existing data
         if (shouldShowOnboarding(data)) {
           const token = localStorage.getItem('access_token');
           const authHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
@@ -177,7 +178,7 @@ export default function MediTrackApp() {
           ]);
           const [meds, symp] = await Promise.all([medsRes.json(), sympRes.json()]);
           const hasData = (Array.isArray(meds) ? meds.length : meds?.results?.length ?? 0) > 0
-                       || (Array.isArray(symp) ? symp.length : symp?.results?.length ?? 0) > 0;
+            || (Array.isArray(symp) ? symp.length : symp?.results?.length ?? 0) > 0;
           if (hasData) {
             // User already has data — mark complete silently so it never shows again
             localStorage.setItem(`onboarding_complete_${data.username}`, 'true');
@@ -244,8 +245,8 @@ export default function MediTrackApp() {
       {/* Onbaording wizard overlay */}
       {showOnboarding && user && (
         <OnboardingWizard
-        user={user}
-        onComplete={()=> setShowOnboarding(false)}/>
+          user={user}
+          onComplete={() => setShowOnboarding(false)} />
       )}
 
 
@@ -274,7 +275,7 @@ export default function MediTrackApp() {
               </div>
               <ThemeToggle />
 
-              
+
 
               {/* Settings link */}
               <button
@@ -325,6 +326,10 @@ export default function MediTrackApp() {
 
         {currentPage === 'history' && user && (
           <HistoryPage user={user} setCurrentPage={setCurrentPage} />
+        )}
+
+        {currentPage === 'calendar' && user && (
+          <MedicationCalendar user={user} setCurrentPage={setCurrentPage} />
         )}
 
       </div>
@@ -915,6 +920,7 @@ function DashboardPage({ user, setCurrentPage, downloadPDF }) {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <NavCard icon={<Pill className="w-6 h-6" />} label="Medications" onClick={() => setCurrentPage('medications')} />
         <NavCard icon={<Activity className="w-6 h-6" />} label="Symptoms" onClick={() => setCurrentPage('symptoms')} />
+        <NavCard icon={<Calendar className="w-6 h-6" />} label="Adherence Calendar" onClick={() => setCurrentPage('calendar')} />
         <NavCard icon={<Brain className="w-6 h-6" />} label="AI Insights" onClick={() => setCurrentPage('insights')} />
         <NavCard icon={<Calendar className="w-6 h-6" />} label="History" onClick={() => setCurrentPage('history')} />
         <NavCard icon={<Settings className="w-6 h-6" />} label="Settings" onClick={() => setCurrentPage('profile')} />
@@ -950,7 +956,7 @@ function DoctorDashboardPage({ user, setCurrentPage, downloadPDF }) {
   const [patientDetails, setPatientDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [detailsLoading, setDetailsLoading] = useState(false);
-  
+
   // ✨ NEW: Search and Sort states
   const [searchQuery, setSearchQuery] = useState('');
   const [symptomSort, setSymptomSort] = useState('date'); // 'date' or 'severity'
@@ -964,7 +970,7 @@ function DoctorDashboardPage({ user, setCurrentPage, downloadPDF }) {
       setLoading(true);
       const data = await apiCall('/auth/patients/');
       setPatients(data);
-      
+
       // Auto-select first patient if available
       if (data.length > 0 && !selectedPatient) {
         handleSelectPatient(data[0].id);
@@ -990,7 +996,7 @@ function DoctorDashboardPage({ user, setCurrentPage, downloadPDF }) {
   };
 
   // ✨ NEW: Filter patients by search query
-  const filteredPatients = patients.filter(patient => 
+  const filteredPatients = patients.filter(patient =>
     patient.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
     patient.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -1059,7 +1065,7 @@ function DoctorDashboardPage({ user, setCurrentPage, downloadPDF }) {
                   Patients ({filteredPatients.length})
                 </p>
               </div>
-              
+
               {/* ✨ NEW: Search Bar */}
               <div className="p-4 border-b border-slate-200 dark:border-slate-700">
                 <div className="relative">
@@ -1084,27 +1090,23 @@ function DoctorDashboardPage({ user, setCurrentPage, downloadPDF }) {
                     <button
                       key={patient.id}
                       onClick={() => handleSelectPatient(patient.id)}
-                      className={`w-full text-left px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${
-                        selectedPatient === patient.id ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-600' : ''
-                      }`}
+                      className={`w-full text-left px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${selectedPatient === patient.id ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-600' : ''
+                        }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
-                          selectedPatient === patient.id ? 'bg-blue-600' : 'bg-slate-400 dark:bg-slate-600'
-                        }`}>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${selectedPatient === patient.id ? 'bg-blue-600' : 'bg-slate-400 dark:bg-slate-600'
+                          }`}>
                           {patient.username.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`font-semibold truncate ${
-                            selectedPatient === patient.id ? 'text-blue-900 dark:text-blue-300' : 'text-slate-900 dark:text-slate-100'
-                          }`}>
+                          <p className={`font-semibold truncate ${selectedPatient === patient.id ? 'text-blue-900 dark:text-blue-300' : 'text-slate-900 dark:text-slate-100'
+                            }`}>
                             {patient.username}
                           </p>
                           <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{patient.email}</p>
                         </div>
-                        <ChevronRight className={`w-5 h-5 flex-shrink-0 ${
-                          selectedPatient === patient.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'
-                        }`} />
+                        <ChevronRight className={`w-5 h-5 flex-shrink-0 ${selectedPatient === patient.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'
+                          }`} />
                       </div>
                     </button>
                   ))
@@ -1134,7 +1136,7 @@ function DoctorDashboardPage({ user, setCurrentPage, downloadPDF }) {
                       Read Only
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">
                       <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Phone</p>
@@ -1166,7 +1168,7 @@ function DoctorDashboardPage({ user, setCurrentPage, downloadPDF }) {
                       ({patientDetails.medications.length})
                     </span>
                   </div>
-                  
+
                   {patientDetails.medications.length === 0 ? (
                     <div className="text-center py-8 bg-slate-50 dark:bg-slate-700 rounded-lg">
                       <p className="text-slate-500 dark:text-slate-400 text-sm">No active medications</p>
@@ -1209,34 +1211,32 @@ function DoctorDashboardPage({ user, setCurrentPage, downloadPDF }) {
                         (Last 20)
                       </span>
                     </div>
-                    
+
                     {/* ✨ NEW: Sort Toggle */}
                     {patientDetails.recent_symptoms.length > 0 && (
                       <div className="flex gap-2">
                         <button
                           onClick={() => setSymptomSort('date')}
-                          className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                            symptomSort === 'date'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                          }`}
+                          className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${symptomSort === 'date'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                            }`}
                         >
                           By Date
                         </button>
                         <button
                           onClick={() => setSymptomSort('severity')}
-                          className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                            symptomSort === 'severity'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                          }`}
+                          className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${symptomSort === 'severity'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                            }`}
                         >
                           By Severity
                         </button>
                       </div>
                     )}
                   </div>
-                  
+
                   {patientDetails.recent_symptoms.length === 0 ? (
                     <div className="text-center py-8 bg-slate-50 dark:bg-slate-700 rounded-lg">
                       <p className="text-slate-500 dark:text-slate-400 text-sm">No symptoms logged</p>
@@ -1284,7 +1284,7 @@ function DoctorDashboardPage({ user, setCurrentPage, downloadPDF }) {
                       (Last 30 days)
                     </span>
                   </div>
-                  
+
                   {patientDetails.mood_logs.length === 0 ? (
                     <div className="text-center py-8 bg-slate-50 dark:bg-slate-700 rounded-lg">
                       <p className="text-slate-500 dark:text-slate-400 text-sm">No mood logs</p>
@@ -1913,7 +1913,7 @@ function ProfilePage({ user, setCurrentPage, showToast }) {
       const birthDate = new Date(formData.date_of_birth);
       const today = new Date();
       const age = today.getFullYear() - birthDate.getFullYear();
-      
+
       if (birthDate > today) {
         newErrors.date_of_birth = 'Date of birth cannot be in the future';
       } else if (age > 150) {
@@ -1949,7 +1949,7 @@ function ProfilePage({ user, setCurrentPage, showToast }) {
       // Update local user state (you might want to refetch profile here)
       showToast('Profile updated successfully!', 'success');
       setIsEditing(false);
-      
+
       // Optional: Trigger a profile refetch in parent component
       // You might want to add a callback prop like onProfileUpdate()
     } catch (err) {
@@ -2002,7 +2002,7 @@ function ProfilePage({ user, setCurrentPage, showToast }) {
           </button>
           <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Settings</h2>
         </div>
-        
+
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
@@ -2037,11 +2037,10 @@ function ProfilePage({ user, setCurrentPage, showToast }) {
                   type="text"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    errors.username 
-                      ? 'border-red-300 dark:border-red-600' 
-                      : 'border-slate-300 dark:border-slate-600'
-                  } dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  className={`w-full px-4 py-2 rounded-lg border ${errors.username
+                    ? 'border-red-300 dark:border-red-600'
+                    : 'border-slate-300 dark:border-slate-600'
+                    } dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500`}
                   placeholder="Enter username"
                 />
                 {errors.username && (
@@ -2069,11 +2068,10 @@ function ProfilePage({ user, setCurrentPage, showToast }) {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    errors.email 
-                      ? 'border-red-300 dark:border-red-600' 
-                      : 'border-slate-300 dark:border-slate-600'
-                  } dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  className={`w-full px-4 py-2 rounded-lg border ${errors.email
+                    ? 'border-red-300 dark:border-red-600'
+                    : 'border-slate-300 dark:border-slate-600'
+                    } dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500`}
                   placeholder="your@email.com"
                 />
                 {errors.email && (
@@ -2101,11 +2099,10 @@ function ProfilePage({ user, setCurrentPage, showToast }) {
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    errors.phone 
-                      ? 'border-red-300 dark:border-red-600' 
-                      : 'border-slate-300 dark:border-slate-600'
-                  } dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  className={`w-full px-4 py-2 rounded-lg border ${errors.phone
+                    ? 'border-red-300 dark:border-red-600'
+                    : 'border-slate-300 dark:border-slate-600'
+                    } dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500`}
                   placeholder="+1 (555) 123-4567"
                 />
                 {errors.phone && (
@@ -2134,11 +2131,10 @@ function ProfilePage({ user, setCurrentPage, showToast }) {
                   value={formData.date_of_birth}
                   onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
                   max={new Date().toISOString().split('T')[0]}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    errors.date_of_birth 
-                      ? 'border-red-300 dark:border-red-600' 
-                      : 'border-slate-300 dark:border-slate-600'
-                  } dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  className={`w-full px-4 py-2 rounded-lg border ${errors.date_of_birth
+                    ? 'border-red-300 dark:border-red-600'
+                    : 'border-slate-300 dark:border-slate-600'
+                    } dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 />
                 {errors.date_of_birth && (
                   <p className="text-red-600 dark:text-red-400 text-xs mt-1 flex items-center gap-1">
@@ -2150,12 +2146,12 @@ function ProfilePage({ user, setCurrentPage, showToast }) {
             ) : (
               <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">
                 <p className="font-medium text-slate-900 dark:text-slate-100">
-                  {user.date_of_birth 
+                  {user.date_of_birth
                     ? new Date(user.date_of_birth + 'T00:00:00').toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })
                     : '—'
                   }
                 </p>
@@ -2231,14 +2227,12 @@ function ProfilePage({ user, setCurrentPage, showToast }) {
             <button
               onClick={() => setFormData({ ...formData, email_digest_enabled: !formData.email_digest_enabled })}
               disabled={!isEditing && saving}
-              className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors ${
-                formData.email_digest_enabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
-              }`}
+              className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors ${formData.email_digest_enabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
+                }`}
             >
               <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                  formData.email_digest_enabled ? 'translate-x-6' : 'translate-x-0'
-                }`}
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${formData.email_digest_enabled ? 'translate-x-6' : 'translate-x-0'
+                  }`}
               />
             </button>
           </div>
