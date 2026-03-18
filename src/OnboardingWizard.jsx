@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Heart, Pill, Activity, CheckCircle, ChevronRight,
-    AlertCircle, Loader, Sparkles, ArrowRight, X
+    AlertCircle, Loader, Sparkles, ArrowRight, X, RefreshCw
 } from 'lucide-react';
 
-const API_BASE_URL = 'https://meditrack.up.railway.app/api';//'http://localhost:8000/api'; //'https://meditrack.up.railway.app/api';
+const API_BASE_URL = 'http://localhost:8000/api'; //'https://meditrack.up.railway.app/api';
 
 const apiCall = async (endpoint, options = {}) => {
     const token = localStorage.getItem('access_token');
@@ -73,12 +73,52 @@ function StepMedication({ onComplete, onSkip }) {
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [justSaved, setJustSaved] = useState(false);
+    
+    // ✨ NEW: Real-time validation
+    const [touched, setTouched] = useState({});
+    const [fieldErrors, setFieldErrors] = useState({});
+
+    const validateField = (field, value) => {
+        if (field === 'name' && !value.trim()) {
+            return 'Medication name is required';
+        }
+        if (field === 'dosage' && !value.trim()) {
+            return 'Dosage is required';
+        }
+        return '';
+    };
+
+    const handleBlur = (field) => {
+        setTouched({ ...touched, [field]: true });
+        const errorMsg = validateField(field, form[field]);
+        setFieldErrors({ ...fieldErrors, [field]: errorMsg });
+    };
+
+    const handleInputChange = (field, value) => {
+        setForm({ ...form, [field]: value });
+        // Clear field error when user starts typing
+        if (touched[field]) {
+            const errorMsg = validateField(field, value);
+            setFieldErrors({ ...fieldErrors, [field]: errorMsg });
+        }
+    };
 
     const handleSubmit = async () => {
-        if (!form.name.trim() || !form.dosage.trim()) {
-            setError('Medication name and dosage are required.');
+        // Validate all fields
+        const errors = {
+            name: validateField('name', form.name),
+            dosage: validateField('dosage', form.dosage),
+        };
+        
+        setFieldErrors(errors);
+        setTouched({ name: true, dosage: true });
+
+        if (errors.name || errors.dosage) {
+            setError('Please fill in all required fields');
             return;
         }
+
         setLoading(true);
         setError('');
         try {
@@ -86,7 +126,13 @@ function StepMedication({ onComplete, onSkip }) {
                 method: 'POST',
                 body: JSON.stringify(form),
             });
-            onComplete();
+            
+            // ✨ NEW: Success animation
+            setJustSaved(true);
+            setTimeout(() => {
+                setJustSaved(false);
+                onComplete();
+            }, 800);
         } catch (err) {
             try {
                 const parsed = JSON.parse(err.message);
@@ -98,6 +144,12 @@ function StepMedication({ onComplete, onSkip }) {
         } finally {
             setLoading(false);
         }
+    };
+
+    // ✨ NEW: Retry handler
+    const handleRetry = () => {
+        setError('');
+        handleSubmit();
     };
 
     return (
@@ -112,10 +164,22 @@ function StepMedication({ onComplete, onSkip }) {
                 </div>
             </div>
 
+            {/* ✨ NEW: Enhanced error display with retry button */}
             {error && (
-                <div className="flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    {error}
+                <div className="flex items-center justify-between gap-3 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600 dark:text-red-400" />
+                        <span className="text-sm text-red-700 dark:text-red-300">{error}</span>
+                    </div>
+                    {!loading && (
+                        <button
+                            onClick={handleRetry}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 dark:bg-red-800/40 text-red-700 dark:text-red-300 rounded-lg text-xs font-medium hover:bg-red-200 dark:hover:bg-red-800/60 transition-colors flex-shrink-0"
+                        >
+                            <RefreshCw className="w-3 h-3" />
+                            Retry
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -127,10 +191,21 @@ function StepMedication({ onComplete, onSkip }) {
                     <input
                         type="text"
                         value={form.name}
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        onBlur={() => handleBlur('name')}
                         placeholder="e.g. Aspirin"
-                        className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className={`w-full px-4 py-2.5 rounded-lg border ${
+                            touched.name && fieldErrors.name
+                                ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
+                                : 'border-slate-300 dark:border-slate-600 focus:ring-blue-500'
+                        } bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 text-sm transition-colors`}
                     />
+                    {touched.name && fieldErrors.name && (
+                        <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            {fieldErrors.name}
+                        </p>
+                    )}
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -139,10 +214,21 @@ function StepMedication({ onComplete, onSkip }) {
                     <input
                         type="text"
                         value={form.dosage}
-                        onChange={(e) => setForm({ ...form, dosage: e.target.value })}
+                        onChange={(e) => handleInputChange('dosage', e.target.value)}
+                        onBlur={() => handleBlur('dosage')}
                         placeholder="e.g. 500mg"
-                        className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className={`w-full px-4 py-2.5 rounded-lg border ${
+                            touched.dosage && fieldErrors.dosage
+                                ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
+                                : 'border-slate-300 dark:border-slate-600 focus:ring-blue-500'
+                        } bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 text-sm transition-colors`}
                     />
+                    {touched.dosage && fieldErrors.dosage && (
+                        <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            {fieldErrors.dosage}
+                        </p>
+                    )}
                 </div>
             </div>
 
@@ -183,17 +269,26 @@ function StepMedication({ onComplete, onSkip }) {
             </div>
 
             <div className="flex items-center gap-3 pt-2">
-                <button
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 text-sm"
-                >
-                    {loading ? <Loader className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-                    {loading ? 'Saving...' : 'Save & Continue'}
-                </button>
+                {/* ✨ NEW: Success animation state */}
+                {justSaved ? (
+                    <div className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white font-semibold rounded-lg shadow-lg">
+                        <CheckCircle className="w-4 h-4" />
+                        Saved!
+                    </div>
+                ) : (
+                    <button
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 text-sm"
+                    >
+                        {loading ? <Loader className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                        {loading ? 'Saving...' : 'Save & Continue'}
+                    </button>
+                )}
                 <button
                     onClick={onSkip}
-                    className="text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors underline underline-offset-2"
+                    disabled={loading || justSaved}
+                    className="text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors underline underline-offset-2 disabled:opacity-50"
                 >
                     Skip for now
                 </button>
@@ -212,6 +307,32 @@ function StepSymptom({ onComplete, onSkip }) {
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [justSaved, setJustSaved] = useState(false);
+    
+    // ✨ NEW: Real-time validation
+    const [touched, setTouched] = useState({});
+    const [fieldErrors, setFieldErrors] = useState({});
+
+    const validateField = (field, value) => {
+        if (field === 'name' && !value.trim()) {
+            return 'Symptom name is required';
+        }
+        return '';
+    };
+
+    const handleBlur = (field) => {
+        setTouched({ ...touched, [field]: true });
+        const errorMsg = validateField(field, form[field]);
+        setFieldErrors({ ...fieldErrors, [field]: errorMsg });
+    };
+
+    const handleInputChange = (field, value) => {
+        setForm({ ...form, [field]: value });
+        if (touched[field]) {
+            const errorMsg = validateField(field, value);
+            setFieldErrors({ ...fieldErrors, [field]: errorMsg });
+        }
+    };
 
     const severityLabel = (v) => {
         if (v <= 3) return { text: 'Mild', color: 'text-emerald-600 dark:text-emerald-400' };
@@ -221,10 +342,18 @@ function StepSymptom({ onComplete, onSkip }) {
     const { text: sevText, color: sevColor } = severityLabel(form.severity);
 
     const handleSubmit = async () => {
-        if (!form.name.trim()) {
-            setError('Please enter a symptom name.');
+        const errors = {
+            name: validateField('name', form.name),
+        };
+        
+        setFieldErrors(errors);
+        setTouched({ name: true });
+
+        if (errors.name) {
+            setError('Please enter a symptom name');
             return;
         }
+
         setLoading(true);
         setError('');
         try {
@@ -232,7 +361,13 @@ function StepSymptom({ onComplete, onSkip }) {
                 method: 'POST',
                 body: JSON.stringify(form),
             });
-            onComplete();
+            
+            // ✨ NEW: Success animation
+            setJustSaved(true);
+            setTimeout(() => {
+                setJustSaved(false);
+                onComplete();
+            }, 800);
         } catch (err) {
             try {
                 const parsed = JSON.parse(err.message);
@@ -244,6 +379,12 @@ function StepSymptom({ onComplete, onSkip }) {
         } finally {
             setLoading(false);
         }
+    };
+
+    // ✨ NEW: Retry handler
+    const handleRetry = () => {
+        setError('');
+        handleSubmit();
     };
 
     return (
@@ -258,10 +399,22 @@ function StepSymptom({ onComplete, onSkip }) {
                 </div>
             </div>
 
+            {/* ✨ NEW: Enhanced error display with retry button */}
             {error && (
-                <div className="flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    {error}
+                <div className="flex items-center justify-between gap-3 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600 dark:text-red-400" />
+                        <span className="text-sm text-red-700 dark:text-red-300">{error}</span>
+                    </div>
+                    {!loading && (
+                        <button
+                            onClick={handleRetry}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 dark:bg-red-800/40 text-red-700 dark:text-red-300 rounded-lg text-xs font-medium hover:bg-red-200 dark:hover:bg-red-800/60 transition-colors flex-shrink-0"
+                        >
+                            <RefreshCw className="w-3 h-3" />
+                            Retry
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -273,10 +426,21 @@ function StepSymptom({ onComplete, onSkip }) {
                     <input
                         type="text"
                         value={form.name}
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        onBlur={() => handleBlur('name')}
                         placeholder="e.g. Headache, Nausea"
-                        className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className={`w-full px-4 py-2.5 rounded-lg border ${
+                            touched.name && fieldErrors.name
+                                ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
+                                : 'border-slate-300 dark:border-slate-600 focus:ring-blue-500'
+                        } bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 text-sm transition-colors`}
                     />
+                    {touched.name && fieldErrors.name && (
+                        <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            {fieldErrors.name}
+                        </p>
+                    )}
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Date</label>
@@ -325,17 +489,26 @@ function StepSymptom({ onComplete, onSkip }) {
             </div>
 
             <div className="flex items-center gap-3 pt-2">
-                <button
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 text-sm"
-                >
-                    {loading ? <Loader className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-                    {loading ? 'Saving...' : 'Save & Continue'}
-                </button>
+                {/* ✨ NEW: Success animation state */}
+                {justSaved ? (
+                    <div className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white font-semibold rounded-lg shadow-lg">
+                        <CheckCircle className="w-4 h-4" />
+                        Saved!
+                    </div>
+                ) : (
+                    <button
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 text-sm"
+                    >
+                        {loading ? <Loader className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                        {loading ? 'Saving...' : 'Save & Continue'}
+                    </button>
+                )}
                 <button
                     onClick={onSkip}
-                    className="text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors underline underline-offset-2"
+                    disabled={loading || justSaved}
+                    className="text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors underline underline-offset-2 disabled:opacity-50"
                 >
                     Skip for now
                 </button>
@@ -390,6 +563,32 @@ function StepDone({ completedSteps, onFinish }) {
                 </div>
             </div>
 
+            {/* ✨ NEW: What's Next Preview */}
+            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 text-left max-w-md mx-auto">
+                <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    What's next in your dashboard:
+                </p>
+                <ul className="space-y-2.5">
+                    <li className="flex items-start gap-2.5 text-xs text-blue-800 dark:text-blue-200">
+                        <CheckCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+                        <span>View your medications and set reminder times</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs text-blue-800 dark:text-blue-200">
+                        <CheckCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+                        <span>Track symptoms over time with severity charts</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs text-blue-800 dark:text-blue-200">
+                        <CheckCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+                        <span>Get AI-powered health insights based on your data</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs text-blue-800 dark:text-blue-200">
+                        <CheckCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+                        <span>Export PDF reports to share with your doctor</span>
+                    </li>
+                </ul>
+            </div>
+
             <button
                 onClick={onFinish}
                 className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-xl hover:shadow-xl hover:shadow-blue-200 dark:hover:shadow-blue-900/50 transition-all text-sm"
@@ -406,20 +605,37 @@ export default function OnboardingWizard({ user, onComplete }) {
     const [step, setStep] = useState(0); // 0=medication, 1=symptom, 2=done
     const [completedSteps, setCompletedSteps] = useState([]);
 
+    // ✨ NEW: Analytics tracking
+    useEffect(() => {
+        console.log('[Onboarding Analytics] Wizard opened for user:', user?.username);
+    }, []);
+
+    useEffect(() => {
+        console.log('[Onboarding Analytics] Step viewed:', step);
+        // Future: send to backend analytics endpoint
+        // apiCall('/analytics/onboarding/step-view/', { method: 'POST', body: JSON.stringify({ step, user_id: user?.id }) });
+    }, [step]);
+
     const markDone = (stepIndex) => {
+        console.log('[Onboarding Analytics] Step completed:', stepIndex);
+        // Future: send completion event
         setCompletedSteps((prev) => [...prev, stepIndex]);
         setStep(stepIndex + 1);
     };
 
     const skip = (stepIndex) => {
+        console.log('[Onboarding Analytics] Step skipped:', stepIndex);
+        // Future: send skip event
         setStep(stepIndex + 1);
     };
 
     const finish = () => {
+        console.log('[Onboarding Analytics] Wizard completed. Steps done:', completedSteps);
         // Use username as key — must match shouldShowOnboarding in App.jsx
         localStorage.setItem(`onboarding_complete_${user.username}`, 'true');
         onComplete();
     };
+
     const steps = [
         { label: 'Medication', icon: <Pill className="w-4 h-4" /> },
         { label: 'Symptom', icon: <Activity className="w-4 h-4" /> },
@@ -429,68 +645,67 @@ export default function OnboardingWizard({ user, onComplete }) {
     return (
         // Full-screen overlay — scrollable on small screens
         <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-lg mx-auto my-4 px-3 sm:px-4 sm:my-0">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-    
-              {/* Header */}
-              <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-4 sm:px-6 py-4 sm:py-5">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Heart className="w-4 h-4 text-white" />
+            <div className="w-full max-w-lg mx-auto my-4 px-3 sm:px-4 sm:my-0">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-4 sm:px-6 py-4 sm:py-5">
+                        <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <Heart className="w-4 h-4 text-white" />
+                                </div>
+                                <span className="text-white font-bold text-base sm:text-lg truncate">Welcome to MediTrack!</span>
+                            </div>
+                            {step < 2 && (
+                                <button
+                                    onClick={finish}
+                                    className="text-white/60 hover:text-white transition-colors p-1 rounded flex-shrink-0 ml-2"
+                                    title="Skip setup"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+                        <p className="text-blue-100 text-xs sm:text-sm pl-9 sm:pl-10">
+                            Hi {user?.username} 👋 — let's get you set up in 2 quick steps
+                        </p>
                     </div>
-                    <span className="text-white font-bold text-base sm:text-lg truncate">Welcome to MediTrack!</span>
-                  </div>
-                  {step < 2 && (
-                    <button
-                      onClick={finish}
-                      className="text-white/60 hover:text-white transition-colors p-1 rounded flex-shrink-0 ml-2"
-                      title="Skip setup"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
+
+                    {/* Step indicators */}
+                    <div className="flex items-center px-4 sm:px-8 py-3 sm:py-5 border-b border-slate-100 dark:border-slate-700">
+                        {steps.map((s, i) => (
+                            <React.Fragment key={i}>
+                                <StepDot index={i} currentStep={step} label={s.label} icon={s.icon} />
+                                {i < steps.length - 1 && <StepConnector done={i < step} />}
+                            </React.Fragment>
+                        ))}
+                    </div>
+
+                    {/* Step content */}
+                    <div className="px-4 sm:px-6 py-4 sm:py-6">
+                        {step === 0 && <StepMedication onComplete={() => markDone(0)} onSkip={() => skip(0)} />}
+                        {step === 1 && <StepSymptom onComplete={() => markDone(1)} onSkip={() => skip(1)} />}
+                        {step === 2 && <StepDone completedSteps={completedSteps} onFinish={finish} />}
+                    </div>
+
+                    {/* Footer progress */}
+                    {step < 2 && (
+                        <div className="px-4 sm:px-6 pb-4 sm:pb-5">
+                            <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 mb-1.5">
+                                <span>Step {step + 1} of 2</span>
+                                <span>{step === 0 ? '0%' : '50%'} complete</span>
+                            </div>
+                            <div className="h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full transition-all duration-500"
+                                    style={{ width: step === 0 ? '0%' : '50%' }}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
-                <p className="text-blue-100 text-xs sm:text-sm pl-9 sm:pl-10">
-                  Hi {user?.username} 👋 — let's get you set up in 2 quick steps
-                </p>
-              </div>
-    
-              {/* Step indicators */}
-              <div className="flex items-center px-4 sm:px-8 py-3 sm:py-5 border-b border-slate-100 dark:border-slate-700">
-                {steps.map((s, i) => (
-                  <React.Fragment key={i}>
-                    <StepDot index={i} currentStep={step} label={s.label} icon={s.icon} />
-                    {i < steps.length - 1 && <StepConnector done={i < step} />}
-                  </React.Fragment>
-                ))}
-              </div>
-    
-              {/* Step content */}
-              <div className="px-4 sm:px-6 py-4 sm:py-6">
-                {step === 0 && <StepMedication onComplete={() => markDone(0)} onSkip={() => skip(0)} />}
-                {step === 1 && <StepSymptom onComplete={() => markDone(1)} onSkip={() => skip(1)} />}
-                {step === 2 && <StepDone completedSteps={completedSteps} onFinish={finish} />}
-              </div>
-    
-              {/* Footer progress */}
-              {step < 2 && (
-                <div className="px-4 sm:px-6 pb-4 sm:pb-5">
-                  <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 mb-1.5">
-                    <span>Step {step + 1} of 2</span>
-                    <span>{step === 0 ? '0%' : '50%'} complete</span>
-                  </div>
-                  <div className="h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full transition-all duration-500"
-                      style={{ width: step === 0 ? '0%' : '50%' }}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
-          </div>
         </div>
-      );
-    }
-    
+    );
+}
