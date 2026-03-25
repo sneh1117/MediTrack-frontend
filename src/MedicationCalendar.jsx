@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, CheckCircle, Circle, X, ChevronLeft, ChevronRight, Pill } from 'lucide-react';
 
 // API Base URL - matches your App.jsx
-const API_BASE_URL = 'https://meditrack.up.railway.app/api';
+const API_BASE_URL = 'https://meditrack7.up.railway.app/api';
 
 export default function MedicationCalendar({ user, setCurrentPage }) {
   const [medications, setMedications] = useState([]);
