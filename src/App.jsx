@@ -4,7 +4,8 @@ import { GoogleLogin } from '@react-oauth/google'
 import {
   Heart, LogOut, Plus, Trash2, Eye, EyeOff, ChevronRight,
   AlertCircle, CheckCircle, Clock, TrendingUp, Brain, Activity,
-  Calendar, Pill, MessageSquare, Loader, Download, Settings, Moon, Sun, Bell
+  Calendar, Pill, MessageSquare, Loader, Download, Settings, Moon, Sun, Bell,
+  Mail, ArrowLeft, Lock
 } from 'lucide-react';
 import LandingPage from './LandingPage';
 import OnboardingWizard from './OnboardingWizard';
@@ -131,8 +132,22 @@ export default function MediTrackApp() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  // Token read from URL on load — passed down to ResetPasswordPage
+  const [resetToken, setResetToken] = useState(null);
 
   useEffect(() => {
+    // ⭐ Check for ?reset_token= in the URL on first load.
+    // If present, go straight to the reset password page regardless of auth state.
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('reset_token');
+    if (urlToken) {
+      setResetToken(urlToken);
+      setCurrentPage('reset-password');
+      // Clean the token out of the URL bar so it isn't accidentally shared
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return; // Skip the normal auth check
+    }
+
     const token = localStorage.getItem('access_token');
     if (token) {
       fetchProfile();
@@ -304,6 +319,11 @@ export default function MediTrackApp() {
         {currentPage === 'login' && <LoginPage onSuccess={fetchProfile} setCurrentPage={setCurrentPage} />}
         {currentPage === 'register' && <RegisterPage setCurrentPage={setCurrentPage} onSuccess={fetchProfile} />}
         {currentPage === 'google-register' && <GoogleRegisterPage setCurrentPage={setCurrentPage} onSuccess={fetchProfile} />}
+        {/* ⭐ New password reset pages */}
+        {currentPage === 'forgot-password' && <ForgotPasswordPage setCurrentPage={setCurrentPage} />}
+        {currentPage === 'reset-password' && (
+          <ResetPasswordPage setCurrentPage={setCurrentPage} tokenFromUrl={resetToken} />
+        )}
         {currentPage === 'dashboard' && user && (
           user.role === 'doctor' ? (
             <DoctorDashboardPage user={user} setCurrentPage={setCurrentPage} downloadPDF={downloadPDF} />
@@ -460,7 +480,17 @@ function LoginPage({ onSuccess, setCurrentPage }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Password</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+                {/* ⭐ Forgot password link */}
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage('forgot-password')}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -522,6 +552,395 @@ function LoginPage({ onSuccess, setCurrentPage }) {
     </div>
   );
 }
+
+// ⭐ Forgot Password Page
+function ForgotPasswordPage({ setCurrentPage }) {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setError('Please enter your email address');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+
+      // Always show the success screen regardless of whether email exists
+      // (backend is designed this way to prevent email enumeration)
+      setSubmitted(true);
+    } catch (err) {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-8">
+        <div className="w-full max-w-md">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700 text-center">
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail className="w-8 h-8 text-green-600 dark:text-green-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3">Check your inbox</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-2">
+              If an account exists for <strong className="text-slate-700 dark:text-slate-200">{email}</strong>,
+              we've sent a password reset link.
+            </p>
+            <p className="text-slate-400 dark:text-slate-500 text-xs mb-8">
+              The link expires in 1 hour. Check your spam folder if you don't see it.
+            </p>
+            <button
+              onClick={() => setCurrentPage('login')}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+            >
+              Back to Sign In
+            </button>
+            <button
+              onClick={() => setSubmitted(false)}
+              className="mt-3 text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400"
+            >
+              Try a different email
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-md">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Forgot Password?</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">
+              Enter the email address linked to your account and we'll send you a reset link.
+            </p>
+          </div>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                autoFocus
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 mt-2"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Sending...
+                </span>
+              ) : (
+                'Send Reset Link'
+              )}
+            </button>
+          </form>
+
+          <button
+            onClick={() => setCurrentPage('login')}
+            className="mt-6 w-full flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Sign In
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ⭐ Reset Password Page — user lands here from the email link
+function ResetPasswordPage({ setCurrentPage, tokenFromUrl }) {
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  // tokenFromUrl is set by the parent from ?reset_token= on page load
+  const token = tokenFromUrl;
+
+  // If no token in URL, show an error immediately
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-8">
+        <div className="w-full max-w-md">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700 text-center">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3">Invalid Link</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-8">
+              This password reset link is invalid or has expired. Please request a new one.
+            </p>
+            <button
+              onClick={() => setCurrentPage('forgot-password')}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+            >
+              Request New Link
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/reset-password/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          password,
+          confirm_password: confirmPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to reset password. The link may have expired.');
+        return;
+      }
+
+      setSuccess(true);
+    } catch (err) {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-8">
+        <div className="w-full max-w-md">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700 text-center">
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3">Password Reset!</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-8">
+              Your password has been updated successfully. You can now sign in with your new password.
+            </p>
+            <button
+              onClick={() => setCurrentPage('login')}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+            >
+              Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-md">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Set New Password</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">
+              Choose a strong password for your account.
+            </p>
+          </div>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+                {error.toLowerCase().includes('expired') && (
+                  <button
+                    onClick={() => setCurrentPage('forgot-password')}
+                    className="text-xs text-red-600 dark:text-red-400 underline mt-1"
+                  >
+                    Request a new reset link
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  required
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {/* Password strength indicator */}
+              {password.length > 0 && (
+                <div className="mt-2">
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4].map((level) => {
+                      const strength = Math.min(
+                        (password.length >= 8 ? 1 : 0) +
+                        (/[A-Z]/.test(password) ? 1 : 0) +
+                        (/[0-9]/.test(password) ? 1 : 0) +
+                        (/[^A-Za-z0-9]/.test(password) ? 1 : 0),
+                        4
+                      );
+                      const colors = ['bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-green-500'];
+                      return (
+                        <div
+                          key={level}
+                          className={`h-1 flex-1 rounded-full transition-all ${level <= strength ? colors[strength - 1] : 'bg-slate-200 dark:bg-slate-600'}`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                    {password.length < 8
+                      ? 'Too short'
+                      : /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)
+                      ? 'Strong password'
+                      : /[A-Z]/.test(password) || /[0-9]/.test(password)
+                      ? 'Good — add a symbol or number to strengthen'
+                      : 'Add uppercase, numbers, or symbols'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Confirm New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirm ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repeat your new password"
+                  className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all dark:bg-slate-700 dark:text-slate-100 ${
+                    confirmPassword && confirmPassword !== password
+                      ? 'border-red-300 dark:border-red-600'
+                      : confirmPassword && confirmPassword === password
+                      ? 'border-green-400 dark:border-green-600'
+                      : 'border-slate-300 dark:border-slate-600'
+                  }`}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute right-3 top-3 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                >
+                  {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {confirmPassword && confirmPassword !== password && (
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> Passwords don't match
+                </p>
+              )}
+              {confirmPassword && confirmPassword === password && (
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" /> Passwords match
+                </p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || (confirmPassword && confirmPassword !== password)}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 mt-2"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Resetting...
+                </span>
+              ) : (
+                'Reset Password'
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Register Page with Google OAuth
 function RegisterPage({ setCurrentPage, onSuccess }) {
   const [formData, setFormData] = useState({
