@@ -771,7 +771,7 @@ function Footer() {
             <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-lg flex items-center justify-center">
               <Heart className="w-6 h-6 text-slate-900" />
             </div>
-            <p className="text-slate-400 text-sm sm:text-base">&copy; 2026 MediTrack. Manage your health intelligently.</p>
+            <p className="text-slate-400 text-sm sm:text-base">&copy; 2026 MediTrack developed and designed by Sneha Naik. Manage your health intelligently.</p>
           </div>
 
           <div className="flex gap-4 sm:gap-6 text-xs sm:text-sm">
