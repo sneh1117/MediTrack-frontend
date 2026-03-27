@@ -22,9 +22,14 @@ import {
   Legend,
 } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
+import LanguageSwitcher from './LanguageSwitcher';
+import { useTranslation } from 'react-i18next';
 
-// API Service for now 
+
+
+
 //for localhost add const API_BASE_URL = 'http://localhost:8000/api';
+
 const API_BASE_URL = 'https://meditrack7.up.railway.app/api';
 
 const apiCall = async (endpoint, options = {}) => {
@@ -127,17 +132,15 @@ function shouldShowOnboarding(user) {
 
 // Main App 
 export default function MediTrackApp() {
+  const { t } = useTranslation();
 
   const [currentPage, setCurrentPage] = useState('landing');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  // Token read from URL on load — passed down to ResetPasswordPage
   const [resetToken, setResetToken] = useState(null);
 
   useEffect(() => {
-    // ⭐ Check for ?reset_token= in the URL on first load.
-    // If present, go straight to the reset password page regardless of auth state.
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get('reset_token');
     if (urlToken) {
@@ -288,6 +291,10 @@ export default function MediTrackApp() {
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{user?.username}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{user?.role}</p>
               </div>
+
+              
+
+
               <ThemeToggle />
 
 
@@ -358,6 +365,7 @@ export default function MediTrackApp() {
 }
 
 function LoginPage({ onSuccess, setCurrentPage }) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -456,8 +464,8 @@ function LoginPage({ onSuccess, setCurrentPage }) {
             <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Heart className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Welcome Back</h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-2">Manage your health with MediTrack</p>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">{t('login.title')}</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-2">{t('login.subtitle')}</p>
           </div>
 
           {error && (
@@ -469,26 +477,29 @@ function LoginPage({ onSuccess, setCurrentPage }) {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Username</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                {t('login.username')}
+              </label>
               <input
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="your username"
+                placeholder={t('login.username')}
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
-                {/* ⭐ Forgot password link */}
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {t('login.password')}
+                </label>
                 <button
                   type="button"
                   onClick={() => setCurrentPage('forgot-password')}
                   className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
                 >
-                  Forgot password?
+                  {t('login.forgotPassword')}
                 </button>
               </div>
               <div className="relative">
@@ -514,7 +525,7 @@ function LoginPage({ onSuccess, setCurrentPage }) {
               disabled={loading}
               className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 mt-6"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? t('login.signingIn') : t('login.signIn')}
             </button>
           </form>
 
@@ -539,12 +550,12 @@ function LoginPage({ onSuccess, setCurrentPage }) {
           </div>
 
           <p className="text-center text-slate-600 dark:text-slate-400 text-sm mt-6">
-            Don't have an account?{' '}
+            {t('login.noAccount')}{' '}
             <button
               onClick={() => setCurrentPage('register')}
               className="text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-700 dark:hover:text-blue-300"
             >
-              Register
+              {t('login.register')}
             </button>
           </p>
         </div>
@@ -872,10 +883,10 @@ function ResetPasswordPage({ setCurrentPage, tokenFromUrl }) {
                     {password.length < 8
                       ? 'Too short'
                       : /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)
-                      ? 'Strong password'
-                      : /[A-Z]/.test(password) || /[0-9]/.test(password)
-                      ? 'Good — add a symbol or number to strengthen'
-                      : 'Add uppercase, numbers, or symbols'}
+                        ? 'Strong password'
+                        : /[A-Z]/.test(password) || /[0-9]/.test(password)
+                          ? 'Good — add a symbol or number to strengthen'
+                          : 'Add uppercase, numbers, or symbols'}
                   </p>
                 </div>
               )}
@@ -891,13 +902,12 @@ function ResetPasswordPage({ setCurrentPage, tokenFromUrl }) {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat your new password"
-                  className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all dark:bg-slate-700 dark:text-slate-100 ${
-                    confirmPassword && confirmPassword !== password
+                  className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all dark:bg-slate-700 dark:text-slate-100 ${confirmPassword && confirmPassword !== password
                       ? 'border-red-300 dark:border-red-600'
                       : confirmPassword && confirmPassword === password
-                      ? 'border-green-400 dark:border-green-600'
-                      : 'border-slate-300 dark:border-slate-600'
-                  }`}
+                        ? 'border-green-400 dark:border-green-600'
+                        : 'border-slate-300 dark:border-slate-600'
+                    }`}
                   required
                 />
                 <button
@@ -943,6 +953,7 @@ function ResetPasswordPage({ setCurrentPage, tokenFromUrl }) {
 
 // Register Page with Google OAuth
 function RegisterPage({ setCurrentPage, onSuccess }) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -1264,6 +1275,7 @@ function GoogleRegisterPage({ setCurrentPage, onSuccess }) {
 
 //Dashboard Page
 function DashboardPage({ user, setCurrentPage, downloadPDF }) {
+  const { t } = useTranslation();
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedDays, setSelectedDays] = useState(30);

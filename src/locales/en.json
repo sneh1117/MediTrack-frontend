@@ -1,0 +1,163 @@
+{
+  "nav": {
+    "meditrack": "MediTrack",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "dashboard": {
+    "welcome": "Welcome Back",
+    "exportReport": "Export Health Report",
+    "downloadPDF": "Download PDF",
+    "quickNav": "Quick Navigation",
+    "medications": "Medications",
+    "symptoms": "Symptoms",
+    "calendar": "Adherence Calendar",
+    "insights": "AI Insights",
+    "history": "History",
+    "stats": {
+      "activeMedications": "Active Medications",
+      "totalSymptoms": "Total Symptoms Logged",
+      "last7Days": "Last 7 Days"
+    }
+  },
+  "login": {
+    "title": "Welcome Back",
+    "subtitle": "Manage your health with MediTrack",
+    "username": "Username",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "signIn": "Sign In",
+    "signingIn": "Signing in...",
+    "orSignInWith": "or",
+    "noAccount": "Don't have an account?",
+    "register": "Register",
+    "errors": {
+      "invalidCredentials": "Invalid username or password",
+      "googleFailed": "Google sign in failed"
+    }
+  },
+  "register": {
+    "title": "Create Account",
+    "subtitle": "Start managing your health today",
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "role": "I am a",
+    "patient": "Patient",
+    "doctor": "Doctor",
+    "signUp": "Sign Up Free",
+    "signingUp": "Creating account...",
+    "haveAccount": "Already have an account?",
+    "errors": {
+      "passwordMismatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 8 characters"
+    }
+  },
+  "medications": {
+    "title": "My Medications",
+    "addMedication": "Add Medication",
+    "name": "Medication Name",
+    "dosage": "Dosage",
+    "frequency": "Frequency",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "notes": "Notes",
+    "save": "Save Medication",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "frequencies": {
+      "once_daily": "Once Daily",
+      "twice_daily": "Twice Daily",
+      "three_times_daily": "Three Times Daily",
+      "as_needed": "As Needed"
+    },
+    "noMedications": "No medications added yet"
+  },
+  "symptoms": {
+    "title": "Symptom Log",
+    "logSymptom": "Log Symptom",
+    "symptom": "Symptom",
+    "severity": "Severity",
+    "date": "Date",
+    "notes": "Notes",
+    "save": "Save Symptom",
+    "noSymptoms": "No symptoms logged yet",
+    "severityLabels": {
+      "mild": "Mild",
+      "moderate": "Moderate",
+      "severe": "Severe"
+    }
+  },
+  "insights": {
+    "title": "AI Health Insights",
+    "refresh": "Refresh",
+    "analysis": "Analysis",
+    "period": "Period",
+    "symptomsAnalyzed": "Symptoms Analyzed"
+  },
+  "profile": {
+    "title": "Settings",
+    "profileInfo": "Profile Information",
+    "editProfile": "Edit Profile",
+    "saveChanges": "Save Changes",
+    "cancel": "Cancel",
+    "username": "Username",
+    "email": "Email",
+    "phone": "Phone Number",
+    "dateOfBirth": "Date of Birth",
+    "role": "Role",
+    "cannotChange": "Cannot be changed",
+    "emailPreferences": "Email Preferences",
+    "weeklyDigest": "Weekly Health Digest",
+    "weeklyDigestDesc": "Receive a weekly summary of your symptoms, mood, medications and AI insights every Sunday.",
+    "nextDigest": "Next digest"
+  },
+  "onboarding": {
+    "welcome": "Welcome to MediTrack!",
+    "greeting": "let's get you set up in 2 quick steps",
+    "steps": {
+      "medication": "Medication",
+      "symptom": "Symptom",
+      "done": "Done"
+    },
+    "medication": {
+      "title": "Add your first medication",
+      "subtitle": "You can add more later from the Medications page"
+    },
+    "symptom": {
+      "title": "Log your first symptom",
+      "subtitle": "Track how you're feeling today to get AI insights"
+    },
+    "done": {
+      "title": "You're all set!",
+      "subtitle": "MediTrack is ready to help you manage your health. Here's what you've done:",
+      "medicationAdded": "First medication added",
+      "symptomLogged": "First symptom logged",
+      "accountCreated": "Account created",
+      "whatsNext": "What's next in your dashboard:",
+      "feature1": "View your medications and set reminder times",
+      "feature2": "Track symptoms over time with severity charts",
+      "feature3": "Get AI-powered health insights based on your data",
+      "feature4": "Export PDF reports to share with your doctor",
+      "goToDashboard": "Go to Dashboard"
+    },
+    "skipForNow": "Skip for now",
+    "saveAndContinue": "Save & Continue",
+    "saving": "Saving...",
+    "saved": "Saved!",
+    "retry": "Retry"
+  },
+  "common": {
+    "backToDashboard": "Back to Dashboard",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "required": "Required",
+    "optional": "Optional",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel"
+  }
+}
