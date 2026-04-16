@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { GoogleLogin } from '@react-oauth/google'
-
+import { mockApiCall } from './mockBackend';
 import {
   Heart, LogOut, Plus, Trash2, Eye, EyeOff, ChevronRight,
   AlertCircle, CheckCircle, Clock, TrendingUp, Brain, Activity,
@@ -33,6 +33,20 @@ import { useTranslation } from 'react-i18next';
 const API_BASE_URL = 'https://meditrack7.up.railway.app/api';
 
 const apiCall = async (endpoint, options = {}) => {
+
+
+  if (localStorage.getItem('demo_mode') === 'true') {
+    const result = await mockApiCall(endpoint, options);
+    // DELETE calls return null — mimic the real backend (no body)
+    if (result === null) return null;
+    return result;
+  }
+
+
+
+
+
+
   const token = localStorage.getItem('access_token');
   const headers = {
     'Content-Type': 'application/json',
@@ -54,7 +68,10 @@ const apiCall = async (endpoint, options = {}) => {
     throw new Error(JSON.stringify(error));
   }
 
-  return response.json();
+
+  // Some endpoints (DELETE) return empty body
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 };
 
 function Toast({ message, type = 'success', onClose }) {
@@ -214,6 +231,19 @@ export default function MediTrackApp() {
     }
   };
 
+  const handleDemoLogin = async () => {
+    // Mark demo mode so apiCall routes to mock backend
+    localStorage.setItem('demo_mode', 'true');
+    localStorage.setItem('access_token', 'demo_token');
+    // Load the demo user profile directly
+    const { mockApiCall: mock } = await import('./mockBackend');
+    const demoUser = await mock('/auth/profile/', {});
+    setUser(demoUser);
+    // Mark onboarding complete so it never fires in demo
+    localStorage.setItem(`onboarding_complete_${demoUser.username}`, 'true');
+    setCurrentPage('dashboard');
+  };
+
   const handleLogout = () => {
     localStorage.clear();
     setUser(null);
@@ -227,6 +257,10 @@ export default function MediTrackApp() {
   };
 
   const downloadPDF = async (days = 30) => {
+    if (localStorage.getItem('demo_mode') === 'true') {
+      showToast('PDF export is not available in demo mode.', 'error');
+      return;
+    }
     showToast('Generating your health report...', 'loading');
     try {
       const token = localStorage.getItem('access_token');
@@ -235,7 +269,6 @@ export default function MediTrackApp() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (!response.ok) throw new Error('Failed to generate report');
-
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -292,7 +325,7 @@ export default function MediTrackApp() {
                 <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{user?.role}</p>
               </div>
 
-              
+
 
 
               <ThemeToggle />
@@ -322,7 +355,10 @@ export default function MediTrackApp() {
 
       {/* Page Content */}
       <div className="max-w-7xl mx-auto">
-        {!user && currentPage === 'landing' && <LandingPage setCurrentPage={setCurrentPage} />}
+
+        {!user && currentPage === 'landing' && (
+          <LandingPage setCurrentPage={setCurrentPage} onDemoLogin={handleDemoLogin} />
+        )}
         {currentPage === 'login' && <LoginPage onSuccess={fetchProfile} setCurrentPage={setCurrentPage} />}
         {currentPage === 'register' && <RegisterPage setCurrentPage={setCurrentPage} onSuccess={fetchProfile} />}
         {currentPage === 'google-register' && <GoogleRegisterPage setCurrentPage={setCurrentPage} onSuccess={fetchProfile} />}
@@ -903,10 +939,10 @@ function ResetPasswordPage({ setCurrentPage, tokenFromUrl }) {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat your new password"
                   className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all dark:bg-slate-700 dark:text-slate-100 ${confirmPassword && confirmPassword !== password
-                      ? 'border-red-300 dark:border-red-600'
-                      : confirmPassword && confirmPassword === password
-                        ? 'border-green-400 dark:border-green-600'
-                        : 'border-slate-300 dark:border-slate-600'
+                    ? 'border-red-300 dark:border-red-600'
+                    : confirmPassword && confirmPassword === password
+                      ? 'border-green-400 dark:border-green-600'
+                      : 'border-slate-300 dark:border-slate-600'
                     }`}
                   required
                 />

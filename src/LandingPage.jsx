@@ -3,10 +3,10 @@ import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import { useInView } from 'react-intersection-observer';
 import {
   Heart, Activity, Brain, Calendar, ArrowRight, Check, Zap, Shield,
-  Users, Pill, Sparkles, TrendingUp, Bell, Lock, Smartphone
+  Users, Pill, Sparkles, TrendingUp, Bell, Lock, Smartphone, Play
 } from 'lucide-react';
 
-export default function LandingPage({ setCurrentPage }) {
+export default function LandingPage({ setCurrentPage, onDemoLogin }) {
   const { scrollYProgress } = useScroll();
   const [isVisible, setIsVisible] = useState(false);
 
@@ -60,25 +60,38 @@ export default function LandingPage({ setCurrentPage }) {
             </h1>
           </motion.div>
 
-          <motion.button
-            onClick={() => setCurrentPage('login')}
-            className="px-4 sm:px-6 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 font-semibold relative overflow-hidden group text-sm sm:text-base"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <span className="relative z-10">Get Started</span>
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500"
-              initial={{ x: '100%' }}
-              whileHover={{ x: 0 }}
-              transition={{ duration: 0.3 }}
-            />
-          </motion.button>
+          <div className="flex items-center gap-3">
+            {/* Try Demo button in nav */}
+            <motion.button
+              onClick={onDemoLogin}
+              className="px-4 py-2 rounded-lg border border-cyan-400/50 text-cyan-400 font-semibold text-sm hover:bg-cyan-400/10 transition-colors flex items-center gap-2"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Play className="w-3.5 h-3.5" />
+              Try Demo
+            </motion.button>
+
+            <motion.button
+              onClick={() => setCurrentPage('login')}
+              className="px-4 sm:px-6 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 font-semibold relative overflow-hidden group text-sm sm:text-base"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <span className="relative z-10">Get Started</span>
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500"
+                initial={{ x: '100%' }}
+                whileHover={{ x: 0 }}
+                transition={{ duration: 0.3 }}
+              />
+            </motion.button>
+          </div>
         </div>
       </motion.nav>
 
       {/* Hero Section */}
-      <HeroSection setCurrentPage={setCurrentPage} />
+      <HeroSection setCurrentPage={setCurrentPage} onDemoLogin={onDemoLogin} />
 
       {/* Stats Bar */}
       <StatsBar />
@@ -90,7 +103,7 @@ export default function LandingPage({ setCurrentPage }) {
       <HowItWorksSection />
 
       {/* Interactive Demo */}
-      <InteractiveDemoSection />
+      <InteractiveDemoSection onDemoLogin={onDemoLogin} />
 
       {/* Benefits */}
       <BenefitsSection />
@@ -99,7 +112,7 @@ export default function LandingPage({ setCurrentPage }) {
       <TestimonialsSection />
 
       {/* CTA Section */}
-      <CTASection setCurrentPage={setCurrentPage} />
+      <CTASection setCurrentPage={setCurrentPage} onDemoLogin={onDemoLogin} />
 
       {/* Footer */}
       <Footer />
@@ -108,7 +121,7 @@ export default function LandingPage({ setCurrentPage }) {
 }
 
 // Hero Section
-function HeroSection({ setCurrentPage }) {
+function HeroSection({ setCurrentPage, onDemoLogin }) {
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
   const [typedText, setTypedText] = useState('');
   const fullText = 'Manage Your Health Intelligently';
@@ -189,19 +202,31 @@ function HeroSection({ setCurrentPage }) {
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </motion.button>
 
+            {/* ⭐ TRY DEMO BUTTON */}
             <motion.button
-              onClick={() => setCurrentPage('login')}
-              className="px-6 sm:px-8 py-3 sm:py-4 rounded-xl border-2 border-blue-400/50 hover:border-blue-400 hover:bg-blue-400/10 font-bold text-base sm:text-lg backdrop-blur-sm"
+              onClick={onDemoLogin}
+              className="px-6 sm:px-8 py-3 sm:py-4 rounded-xl border-2 border-cyan-400/70 hover:border-cyan-400 hover:bg-cyan-400/10 font-bold text-base sm:text-lg backdrop-blur-sm flex items-center justify-center gap-2 transition-colors"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              Sign In
+              <Play className="w-5 h-5 text-cyan-400" />
+              Try Live Demo
             </motion.button>
           </motion.div>
 
+          {/* Demo hint */}
+          <motion.p
+            className="text-sm text-slate-400"
+            initial={{ opacity: 0 }}
+            animate={inView ? { opacity: 1 } : {}}
+            transition={{ delay: 1.0 }}
+          >
+            ✨ No signup needed — explore the full app instantly
+          </motion.p>
+
           {/* Social Proof */}
           <motion.div
-            className="flex items-center gap-6 pt-6"
+            className="flex items-center gap-6 pt-2"
             initial={{ opacity: 0 }}
             animate={inView ? { opacity: 1 } : {}}
             transition={{ delay: 0.9 }}
@@ -300,20 +325,31 @@ function HeroSection({ setCurrentPage }) {
             {/* Floating Elements */}
             <motion.div
               className="absolute -top-4 -right-4 w-20 h-20 bg-cyan-400/40 rounded-full blur-xl"
-              animate={{
-                scale: [1, 1.2, 1],
-                opacity: [0.4, 0.8, 0.4]
-              }}
+              animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.8, 0.4] }}
               transition={{ duration: 3, repeat: Infinity }}
             />
             <motion.div
               className="absolute -bottom-4 -left-4 w-32 h-32 bg-blue-400/30 rounded-full blur-xl"
-              animate={{
-                scale: [1, 1.3, 1],
-                opacity: [0.3, 0.7, 0.3]
-              }}
+              animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.7, 0.3] }}
               transition={{ duration: 4, repeat: Infinity }}
             />
+
+            {/* ⭐ Demo overlay CTA on the dashboard preview */}
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center rounded-3xl"
+              initial={{ opacity: 0 }}
+              whileHover={{ opacity: 1 }}
+            >
+              <motion.button
+                onClick={onDemoLogin}
+                className="px-6 py-3 bg-cyan-400 text-slate-900 font-bold rounded-xl flex items-center gap-2 shadow-xl"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Play className="w-5 h-5" />
+                Try Live Demo
+              </motion.button>
+            </motion.div>
           </motion.div>
         </motion.div>
       </div>
@@ -355,17 +391,11 @@ function CountUpStat({ value, label, suffix, icon: Icon, delay, inView }) {
       let start = 0;
       const duration = 2000;
       const increment = value / (duration / 16);
-
       const timer = setInterval(() => {
         start += increment;
-        if (start >= value) {
-          setCount(value);
-          clearInterval(timer);
-        } else {
-          setCount(Math.floor(start));
-        }
+        if (start >= value) { setCount(value); clearInterval(timer); }
+        else setCount(Math.floor(start));
       }, 16);
-
       return () => clearInterval(timer);
     }
   }, [inView, value]);
@@ -378,10 +408,7 @@ function CountUpStat({ value, label, suffix, icon: Icon, delay, inView }) {
       transition={{ delay, duration: 0.5 }}
     >
       <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-cyan-400 mx-auto mb-2" />
-      <motion.div
-        className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent"
-        key={count}
-      >
+      <motion.div className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent" key={count}>
         {count.toLocaleString()}{suffix}
       </motion.div>
       <p className="text-slate-400 text-xs sm:text-sm mt-1">{label}</p>
@@ -392,64 +419,22 @@ function CountUpStat({ value, label, suffix, icon: Icon, delay, inView }) {
 // Features Section
 function FeaturesSection() {
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
-
   const features = [
-    {
-      icon: Pill,
-      title: 'Medication Management',
-      description: 'Track all your medications, dosages, and schedules in one place',
-      color: 'from-blue-400 to-blue-600'
-    },
-    {
-      icon: Activity,
-      title: 'Symptom Tracking',
-      description: 'Log symptoms with severity ratings and detailed notes',
-      color: 'from-cyan-400 to-cyan-600'
-    },
-    {
-      icon: Brain,
-      title: 'AI Health Insights',
-      description: 'Get intelligent analysis powered by Google Gemini',
-      color: 'from-purple-400 to-purple-600'
-    },
-    {
-      icon: Calendar,
-      title: 'Smart Scheduling',
-      description: 'Never miss a medication with smart reminders',
-      color: 'from-pink-400 to-pink-600'
-    },
-    {
-      icon: Shield,
-      title: 'Secure & Private',
-      description: 'Your health data is encrypted and secure',
-      color: 'from-green-400 to-green-600'
-    },
-    {
-      icon: Users,
-      title: 'Doctor Support',
-      description: 'Share your health data with your healthcare provider',
-      color: 'from-orange-400 to-orange-600'
-    },
+    { icon: Pill, title: 'Medication Management', description: 'Track all your medications, dosages, and schedules in one place', color: 'from-blue-400 to-blue-600' },
+    { icon: Activity, title: 'Symptom Tracking', description: 'Log symptoms with severity ratings and detailed notes', color: 'from-cyan-400 to-cyan-600' },
+    { icon: Brain, title: 'AI Health Insights', description: 'Get intelligent analysis powered by Google Gemini', color: 'from-purple-400 to-purple-600' },
+    { icon: Calendar, title: 'Smart Scheduling', description: 'Never miss a medication with smart reminders', color: 'from-pink-400 to-pink-600' },
+    { icon: Shield, title: 'Secure & Private', description: 'Your health data is encrypted and secure', color: 'from-green-400 to-green-600' },
+    { icon: Users, title: 'Doctor Support', description: 'Share your health data with your healthcare provider', color: 'from-orange-400 to-orange-600' },
   ];
 
   return (
     <section ref={ref} className="py-20 px-4 sm:px-6 lg:px-8 w-full">
       <div className="w-full max-w-7xl mx-auto">
-        <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-        >
-          <motion.h3
-            className="text-4xl sm:text-5xl font-bold mb-4"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={inView ? { opacity: 1, scale: 1 } : {}}
-          >
-            Powerful Features
-          </motion.h3>
+        <motion.div className="text-center mb-16" initial={{ opacity: 0, y: 30 }} animate={inView ? { opacity: 1, y: 0 } : {}}>
+          <h3 className="text-4xl sm:text-5xl font-bold mb-4">Powerful Features</h3>
           <p className="text-lg sm:text-xl text-slate-400">Everything you need to manage your health</p>
         </motion.div>
-
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
           {features.map((feature, i) => (
             <FeatureCard key={i} {...feature} index={i} inView={inView} />
@@ -469,29 +454,13 @@ function FeatureCard({ icon: Icon, title, description, color, index, inView }) {
       transition={{ delay: index * 0.1 }}
       whileHover={{ scale: 1.05, y: -10 }}
     >
-      {/* Gradient Background on Hover */}
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
-      />
-
-      <motion.div
-        className={`w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br ${color} rounded-xl flex items-center justify-center mb-6 relative z-10`}
-        whileHover={{ rotate: 360 }}
-        transition={{ duration: 0.6 }}
-      >
+      <motion.div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <motion.div className={`w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br ${color} rounded-xl flex items-center justify-center mb-6 relative z-10`} whileHover={{ rotate: 360 }} transition={{ duration: 0.6 }}>
         <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
       </motion.div>
-
       <h4 className="text-lg sm:text-xl font-bold mb-3 relative z-10">{title}</h4>
       <p className="text-sm sm:text-base text-slate-400 relative z-10">{description}</p>
-
-      {/* Shine Effect */}
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
-        initial={{ x: '-100%' }}
-        whileHover={{ x: '100%' }}
-        transition={{ duration: 0.6 }}
-      />
+      <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent" initial={{ x: '-100%' }} whileHover={{ x: '100%' }} transition={{ duration: 0.6 }} />
     </motion.div>
   );
 }
@@ -499,7 +468,6 @@ function FeatureCard({ icon: Icon, title, description, color, index, inView }) {
 // How It Works Section
 function HowItWorksSection() {
   const [ref, inView] = useInView({ triggerOnce: true });
-
   const steps = [
     { number: 1, title: 'Sign Up', description: 'Create your free account in seconds', icon: Zap },
     { number: 2, title: 'Add Your Data', description: 'Log medications and symptoms easily', icon: Activity },
@@ -509,33 +477,16 @@ function HowItWorksSection() {
   return (
     <section ref={ref} className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-800/30 border-y border-blue-500/20 w-full">
       <div className="w-full max-w-7xl mx-auto">
-        <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-        >
+        <motion.div className="text-center mb-16" initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}}>
           <h3 className="text-4xl sm:text-5xl font-bold mb-4">How It Works</h3>
           <p className="text-lg sm:text-xl text-slate-400">Simple 3-step setup</p>
         </motion.div>
-
         <div className="relative">
-          {/* Connection Line */}
           <div className="hidden md:block absolute top-1/2 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 transform -translate-y-1/2" />
-
           <div className="grid md:grid-cols-3 gap-8 relative z-10">
             {steps.map((step, i) => (
-              <motion.div
-                key={i}
-                className="text-center"
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={inView ? { opacity: 1, scale: 1 } : {}}
-                transition={{ delay: i * 0.2 }}
-              >
-                <motion.div
-                  className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-900 shadow-2xl shadow-blue-500/50"
-                  whileHover={{ scale: 1.2, rotate: 360 }}
-                  transition={{ duration: 0.5 }}
-                >
+              <motion.div key={i} className="text-center" initial={{ opacity: 0, scale: 0.5 }} animate={inView ? { opacity: 1, scale: 1 } : {}} transition={{ delay: i * 0.2 }}>
+                <motion.div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-900 shadow-2xl shadow-blue-500/50" whileHover={{ scale: 1.2, rotate: 360 }} transition={{ duration: 0.5 }}>
                   <step.icon className="w-8 h-8 sm:w-10 sm:h-10" />
                 </motion.div>
                 <h4 className="text-xl sm:text-2xl font-bold mb-2">{step.title}</h4>
@@ -549,19 +500,23 @@ function HowItWorksSection() {
   );
 }
 
-// Interactive Demo Section
-function InteractiveDemoSection() {
+// Interactive Demo Section — now actually launches the demo
+function InteractiveDemoSection({ onDemoLogin }) {
   const [ref, inView] = useInView({ triggerOnce: true });
   const [activeTab, setActiveTab] = useState('medications');
+
+  const tabContent = {
+    medications: { icon: Pill, title: 'Medication Management', desc: 'Track all your medications, dosages, and schedules. Get reminders so you never miss a dose.' },
+    symptoms: { icon: Activity, title: 'Symptom Tracking', desc: 'Log symptoms with severity ratings (1-10), add notes, and see patterns over time.' },
+    insights: { icon: Brain, title: 'AI Health Insights', desc: 'Google Gemini analyses your health data and surfaces patterns, correlations, and gentle recommendations.' },
+  };
+
+  const { icon: TabIcon, title: tabTitle, desc: tabDesc } = tabContent[activeTab];
 
   return (
     <section ref={ref} className="py-20 px-4 sm:px-6 lg:px-8 w-full">
       <div className="w-full max-w-7xl mx-auto">
-        <motion.div
-          className="text-center mb-12"
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-        >
+        <motion.div className="text-center mb-12" initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}}>
           <h3 className="text-4xl sm:text-5xl font-bold mb-4">See It In Action</h3>
           <p className="text-lg sm:text-xl text-slate-400">Interactive preview of MediTrack</p>
         </motion.div>
@@ -577,10 +532,9 @@ function InteractiveDemoSection() {
               <motion.button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold capitalize transition-all text-sm sm:text-base whitespace-nowrap ${activeTab === tab
-                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
-                    : 'bg-white/5 text-slate-400 hover:bg-white/10'
-                  }`}
+                className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold capitalize transition-all text-sm sm:text-base whitespace-nowrap ${
+                  activeTab === tab ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg' : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                }`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -596,21 +550,26 @@ function InteractiveDemoSection() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="min-h-[250px] sm:min-h-[300px] flex items-center justify-center"
+              className="min-h-[250px] sm:min-h-[300px] flex flex-col items-center justify-center gap-6"
             >
               <div className="text-center">
                 <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-full flex items-center justify-center mx-auto mb-6">
-                  {activeTab === 'medications' && <Pill className="w-10 h-10 sm:w-12 sm:h-12 text-slate-900" />}
-                  {activeTab === 'symptoms' && <Activity className="w-10 h-10 sm:w-12 sm:h-12 text-slate-900" />}
-                  {activeTab === 'insights' && <Brain className="w-10 h-10 sm:w-12 sm:h-12 text-slate-900" />}
+                  <TabIcon className="w-10 h-10 sm:w-12 sm:h-12 text-slate-900" />
                 </div>
-                <h4 className="text-xl sm:text-2xl font-bold mb-4 capitalize">
-                  {activeTab} Dashboard
-                </h4>
-                <p className="text-sm sm:text-base text-slate-400 max-w-md mx-auto px-4">
-                  Track and manage your {activeTab} with our intuitive interface
-                </p>
+                <h4 className="text-xl sm:text-2xl font-bold mb-4">{tabTitle}</h4>
+                <p className="text-sm sm:text-base text-slate-400 max-w-md mx-auto px-4">{tabDesc}</p>
               </div>
+
+              {/* ⭐ CTA to actually launch demo */}
+              <motion.button
+                onClick={onDemoLogin}
+                className="px-8 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-blue-500/30"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Play className="w-5 h-5" />
+                Launch Live Demo — No Signup Needed
+              </motion.button>
             </motion.div>
           </AnimatePresence>
         </motion.div>
@@ -622,7 +581,6 @@ function InteractiveDemoSection() {
 // Benefits Section
 function BenefitsSection() {
   const [ref, inView] = useInView({ triggerOnce: true });
-
   const benefits = [
     'Completely free to use',
     'AI-powered health insights',
@@ -635,14 +593,9 @@ function BenefitsSection() {
   return (
     <section ref={ref} className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-800/30 border-y border-blue-500/20 w-full">
       <div className="w-full max-w-5xl mx-auto">
-        <motion.div
-          className="text-center mb-12"
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-        >
+        <motion.div className="text-center mb-12" initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}}>
           <h3 className="text-4xl sm:text-5xl font-bold mb-4">Why Choose MediTrack?</h3>
         </motion.div>
-
         <div className="space-y-4">
           {benefits.map((benefit, i) => (
             <motion.div
@@ -653,11 +606,7 @@ function BenefitsSection() {
               transition={{ delay: i * 0.1 }}
               whileHover={{ scale: 1.02, x: 10 }}
             >
-              <motion.div
-                className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-full flex items-center justify-center flex-shrink-0"
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.5 }}
-              >
+              <motion.div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-full flex items-center justify-center flex-shrink-0" whileHover={{ rotate: 360 }} transition={{ duration: 0.5 }}>
                 <Check className="w-4 h-4 sm:w-5 sm:h-5 text-slate-900" />
               </motion.div>
               <span className="text-base sm:text-lg font-medium group-hover:text-cyan-400 transition-colors">{benefit}</span>
@@ -672,7 +621,6 @@ function BenefitsSection() {
 // Testimonials Section
 function TestimonialsSection() {
   const [ref, inView] = useInView({ triggerOnce: true });
-
   const testimonials = [
     { name: 'Sarah M.', role: 'Patient', text: 'MediTrack has completely changed how I manage my medications. The AI insights are incredible!' },
     { name: 'Dr. James K.', role: 'Physician', text: 'I recommend MediTrack to all my patients. It helps them stay on track with their treatment.' },
@@ -682,15 +630,10 @@ function TestimonialsSection() {
   return (
     <section ref={ref} className="py-20 px-4 sm:px-6 lg:px-8 w-full">
       <div className="w-full max-w-7xl mx-auto">
-        <motion.div
-          className="text-center mb-12"
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-        >
+        <motion.div className="text-center mb-12" initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}}>
           <h3 className="text-4xl sm:text-5xl font-bold mb-4">Loved by Users</h3>
           <p className="text-lg sm:text-xl text-slate-400">See what our community says</p>
         </motion.div>
-
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
           {testimonials.map((testimonial, i) => (
             <motion.div
@@ -720,7 +663,7 @@ function TestimonialsSection() {
 }
 
 // CTA Section
-function CTASection({ setCurrentPage }) {
+function CTASection({ setCurrentPage, onDemoLogin }) {
   const [ref, inView] = useInView({ triggerOnce: true });
 
   return (
@@ -730,9 +673,7 @@ function CTASection({ setCurrentPage }) {
         initial={{ opacity: 0, scale: 0.9 }}
         animate={inView ? { opacity: 1, scale: 1 } : {}}
       >
-        {/* Glow Effect */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-3xl blur-3xl" />
-
         <div className="relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-3xl p-8 sm:p-12 border border-blue-400/30">
           <motion.h3
             className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6"
@@ -745,16 +686,31 @@ function CTASection({ setCurrentPage }) {
             Join thousands of users already managing their health with MediTrack
           </p>
 
-          <motion.button
-            onClick={() => setCurrentPage('register')}
-            className="px-8 sm:px-12 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 font-bold text-lg sm:text-xl flex items-center justify-center gap-3 mx-auto shadow-2xl shadow-blue-500/50"
-            whileHover={{ scale: 1.1, boxShadow: "0 25px 50px rgba(59, 130, 246, 0.6)" }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Zap className="w-5 h-5 sm:w-6 sm:h-6" />
-            Get Started Free
-            <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" />
-          </motion.button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <motion.button
+              onClick={() => setCurrentPage('register')}
+              className="px-8 sm:px-12 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 font-bold text-lg sm:text-xl flex items-center justify-center gap-3 shadow-2xl shadow-blue-500/50"
+              whileHover={{ scale: 1.1, boxShadow: "0 25px 50px rgba(59, 130, 246, 0.6)" }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Zap className="w-5 h-5 sm:w-6 sm:h-6" />
+              Get Started Free
+              <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" />
+            </motion.button>
+
+            {/* ⭐ Demo button in CTA */}
+            <motion.button
+              onClick={onDemoLogin}
+              className="px-8 sm:px-12 py-4 sm:py-5 rounded-2xl border-2 border-cyan-400/70 hover:border-cyan-400 hover:bg-cyan-400/10 font-bold text-lg sm:text-xl flex items-center justify-center gap-3 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Play className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
+              Try Demo First
+            </motion.button>
+          </div>
+
+          <p className="text-slate-500 text-sm mt-6">✨ Demo mode — full app, no account needed</p>
         </div>
       </motion.div>
     </section>
@@ -773,7 +729,6 @@ function Footer() {
             </div>
             <p className="text-slate-400 text-sm sm:text-base">&copy; 2026 MediTrack developed and designed by Sneha Naik. Manage your health intelligently.</p>
           </div>
-
           <div className="flex gap-4 sm:gap-6 text-xs sm:text-sm">
             <a href="#" className="text-slate-400 hover:text-cyan-400 transition-colors">Privacy</a>
             <a href="#" className="text-slate-400 hover:text-cyan-400 transition-colors">Terms</a>
