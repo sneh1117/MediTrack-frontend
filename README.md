@@ -9,10 +9,31 @@
 [![Live Demo](https://img.shields.io/badge/Live-Demo-success)](https://meditrack7.vercel.app)
 [![API Docs](https://img.shields.io/badge/API-Docs-blue)](https://meditrack.up.railway.app/api/docs/)
 
-A React dashboard for managing medications, tracking symptoms, logging mood, exporting health reports, and getting AI-powered health insights.
+
+## 🚀 Try MediTrack Instantly (No Signup Required)
+
+👉 **Live App:** https://meditrack7.vercel.app  
+
+You can explore the app using **Trial Mode** — no account required.
+
+✔️ Add medications  
+✔️ Log symptoms & mood  
+✔️ View dashboard & insights  
+
+> Built for instant access — no friction, no signup, just try it.
+
+---
+
+## 🎯 What is MediTrack?
+
+MediTrack is a modern health tracking dashboard that helps users manage medications, monitor symptoms, and gain AI-powered insights — all in one place.
+
+A modern React-based health dashboard for managing medications, tracking symptoms, and generating AI-powered health insights.
 
 **Live App:** https://meditrack7.vercel.app  
-<img width="1282" height="717" alt="image" src="https://github.com/user-attachments/assets/9d6b2ea4-24ab-4ba8-8a1b-732da5d0201d" />
+> 💡 Use **Trial Mode** to explore instantly — no signup required.
+<img width="1278" height="630" alt="image" src="https://github.com/user-attachments/assets/9abf9bc7-0077-4d03-94ff-ac5d1c8c0f25" />
+
  
 **API Docs:** https://meditrack.up.railway.app/api/docs/
 <img width="1363" height="716" alt="Screenshot 2026-03-09 165623" src="https://github.com/user-attachments/assets/0720975c-ab9e-46f6-a3ac-af7b62aa9910" />
@@ -32,13 +53,24 @@ A React dashboard for managing medications, tracking symptoms, logging mood, exp
 - **Shareable health reports** enable better doctor-patient communication
 - **Automated reminders** reduce missed doses
 
-**Real-World Impact:**
-- ✅ Onboarding Wizard increases user activation by 3x (58% → 87% complete first medication entry)
-- ✅ 1,200+ active monthly users with 4.2/5 average satisfaction rating
-- ✅ 85% of users export PDF reports to share with healthcare providers
-- ✅ Average symptom tracking adherence: 72% (industry baseline: 35%)
-- ✅ Backend healthcare integration via FHIR R4 API for provider access
+Early-stage product with active testing and continuous iteration.
 
+---
+## 🧪 Trial Mode
+
+MediTrack includes a built-in **Trial Mode** so anyone can explore the app instantly.
+
+### Why it matters
+- No login required  
+- No setup friction  
+- Immediate access to core features  
+
+### What you can try
+- Add medications  
+- Log symptoms & mood  
+- Explore dashboards and charts  
+
+Perfect for quick demos and first-time users.
 ---
 
 ## 🚀 Features
@@ -335,6 +367,16 @@ For production, add the environment variable in Vercel:
 
 New patients are guided through a 3-step setup wizard the first time they log in. This improves activation rates by helping users add their first medication and symptom immediately after signup.
 
+## ⚡ Quick Experience Flow
+
+1. Open the app  
+2. Use Trial Mode (no signup)  
+3. Add a medication  
+4. Log a symptom  
+5. View insights instantly  
+
+< 60 seconds to experience the full product.
+
 ### How It Works
 
 1. After login, the frontend fetches the user's profile
@@ -573,6 +615,7 @@ tailwind.config.js       # Tailwind config with dark mode enabled
 
 - **Backend Repo:** https://github.com/sneh1117/MediTrack
 - **Live App:** https://meditrack7.vercel.app
+  > 💡 Use **Trial Mode** to explore instantly — no signup required.
 - **API Docs:** https://meditrack.up.railway.app/api/docs/
 
 ---
